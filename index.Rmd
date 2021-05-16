@@ -14,19 +14,23 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-**Affiliation**:  Keller Lab; Department of Plant Biology, University of Vermont  
+**Affiliation**   :  Keller Lab; Department of Plant Biology, University of Vermont  
 **E-mail contact**:  anoob.prakash@uvm.edu  
+**github repo**   :  https://github.com/anoobvinu07/NSF_RedSpruce_CG  
 
 
 
 Sl No. | Scripts                                                                                                | Visualizations                            
 ------ | ------------------------------------------------------------------------------------------------------ | ---------------------------------  
-1      | [Heritability estimation](./1_heritability.R) ; [Heritability ](./2_heritability_values_per_garden.R)  | NA
-2      | [Genetic variation and GxE](./0_reaction_norms.Rmd)                                                    | [Genetic variation and GxE](./0_reaction_norms.html)  
-3      | [Genetic correlation model ](./3_genetic_correlation_MCMCmodel_final.R)                                | [Genetic Correlation](./4_genetic_correlation_plots.html) 
-4      | [Climate transfer distance](./5_traitPlasticity_TD.Rmd)                                                | [Climate transfer distance](./5_traitPlasticity_TD.html) 
-5      | [Trait Platicity](./6_traitPlasticity.R)                                                               | [Trait Platicity](./7_traitPlasticity_family_and_pop_blup_plots.html)   
-6      | [Reflush ](./10_Reflush_2020.Rmd)                                                                      | [Reflush ](./10_Reflush_2020.html)   
+   1   | [Heritability estimation](./1_heritability.R) ; [Heritability ](./2_heritability_values_per_garden.R)  | NA
+   2   | [Genetic variation and GxE](./0_reaction_norms.Rmd)                                                    | [Genetic variation and GxE](./0_reaction_norms.html)  
+   3   | [Genetic correlation model ](./3_genetic_correlation_MCMCmodel_final.R)                                | [Genetic Correlation](./4_genetic_correlation_plots.html) 
+   4   | [Climate transfer distance](./5_traitPlasticity_TD.Rmd)                                                | [Climate transfer distance](./5_traitPlasticity_TD.html) 
+   5   | [Trait Platicity](./6_traitPlasticity.R)                                                               | [Trait Platicity](./7_traitPlasticity_family_and_pop_blup_plots.html)   
+   6   | [Reflush ](./10_Reflush_2020.Rmd)                                                                      | [Reflush ](./10_Reflush_2020.html)   
+   
+   Still working:  
+   Trait variance partition: [script](./9_trait_variance_partition_Region_plots.Rmd) ; [html](./9_trait_variance_partition_Region_plots.html)  
 
 
 
