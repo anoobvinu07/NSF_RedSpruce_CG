@@ -1,0 +1,37 @@
+---
+title: "Evoultion of gentoypic variation and plasticity in climate adaptive traits of red spruce (*Picea rubens* Sarg.)"
+author: "Anoob Prakash"
+output:
+  rmarkdown::html_document:
+    theme: cosmo  
+    number_sections: false
+    toc: true
+    toc_float: true
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Affiliation**:  Keller Lab; Department of Plant Biology, University of Vermont  
+**E-mail contact**:  anoob.prakash@uvm.edu  
+
+
+
+Sl No. | Scripts                                                                                                | Visualizations                            
+------ | ------------------------------------------------------------------------------------------------------ | ---------------------------------  
+1      | [Heritability estimation](./1_heritability.R) ; [Heritability ](./2_heritability_values_per_garden.R)  | NA
+2      | [Genetic variation and GxE](./0_reaction_norms.Rmd)                                                    | [Genetic variation and GxE](./0_reaction_norms.html)  
+3      | [Genetic correlation model ](./3_genetic_correlation_MCMCmodel_final.R)                                | [Genetic Correlation](./4_genetic_correlation_plots.html) 
+4      | [Climate transfer distance](./5_traitPlasticity_TD.Rmd)                                                | [Climate transfer distance](./5_traitPlasticity_TD.html) 
+5      | [Trait Platicity](./6_traitPlasticity.R)                                                               | [Trait Platicity](./7_traitPlasticity_family_and_pop_blup_plots.html)   
+6      | [Reflush ](./10_Reflush_2020.Rmd)                                                                      | [Reflush ](./10_Reflush_2020.html)   
+
+
+
+
+<!-- ```{r pressure, echo=FALSE, fig.cap="Fig. 1. The genealogy of a sample of five alleles, showing the time intervals between coalescent events (Hudson, 1990)", out.width = '60%'} -->
+<!-- knitr::include_graphics("./hudson1990_coalescence.png") -->
+<!-- ```   -->
+

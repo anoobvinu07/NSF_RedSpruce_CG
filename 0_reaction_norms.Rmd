@@ -1,0 +1,950 @@
+---
+title: "NSF Red Spruce common garden reaction norms (2019-20)"
+author: "Anoob Prakash"
+date: "16/11/2020"
+output:
+  rmarkdown::html_document:
+    theme: cosmo  
+    number_sections: false
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+suppressPackageStartupMessages({
+require(tidyr)
+require(lme4) # for running models
+require(sjPlot) # for visualizing model interactions
+require(sjmisc)
+require(sjlabelled)
+require(tidyverse)
+require(viridis)
+require(lmerTest)
+})
+```
+
+# Climate data  
+```{r}
+Population_climateNA <- read.csv("C:/Dropbox/UVM/Research/Code/ClimateData/ClimateNA/Family/PCA_sprucePops.txt",
+                                 header=T, sep="\t")
+colnames(Population_climateNA)[colnames(Population_climateNA)=="PC1_sel"] <- "PC1"
+
+Family_climateNA <- read.csv("C:/Dropbox/UVM/Research/Code/ClimateData/ClimateNA/Family/PCA_spruceFams.txt",
+                                 header=T, sep="\t")
+colnames(Family_climateNA)[colnames(Family_climateNA)=="PC1_sel"] <- "PC1"
+```
+
+# Trait data   
+```{r}
+budset_2019 <- read.csv("./trait_data/BudSet_2019.csv", stringsAsFactors = T)
+budset_2020 <- read.csv("./trait_data/BudSet_2020.csv", stringsAsFactors = T)
+budbreak_2020 <- read.csv("./trait_data/BudBreak_2020_cGDD.csv", stringsAsFactors = T)
+growth_2019 <- read.csv("./trait_data/Growth_2019.csv", stringsAsFactors = T)
+growth_2020 <- read.csv("./trait_data/Growth_2020.csv", stringsAsFactors = T)
+Plasticity <- read.csv("./trait_data/Plasticity_TD.csv", stringsAsFactors = T)
+```
+
+* Reorder levels  
+```{r}
+# Garden  
+budset_2019$Garden <-  factor(budset_2019$Garden,levels = c("Vermont", "Maryland", "North_Carolina"))
+budset_2020$Garden <-  factor(budset_2020$Garden,levels = c("Vermont", "Maryland", "North_Carolina"))
+budbreak_2020$Garden <-  factor(budbreak_2020$Garden,levels = c("Vermont", "Maryland", "North_Carolina"))
+growth_2019$Garden <-  factor(growth_2019$Garden,levels = c("Vermont", "Maryland", "North_Carolina"))
+growth_2020$Garden <-  factor(growth_2020$Garden,levels = c("Vermont", "Maryland", "North_Carolina"))
+
+# Region
+budset_2019$Region <-  factor(budset_2019$Region,levels = c("Core", "Margin", "Edge"))
+budset_2020$Region <-  factor(budset_2020$Region,levels = c("Core", "Margin", "Edge"))
+budbreak_2020$Region <-  factor(budbreak_2020$Region,levels = c("Core", "Margin", "Edge"))
+growth_2019$Region <-  factor(growth_2019$Region,levels = c("Core", "Margin", "Edge"))
+growth_2020$Region <-  factor(growth_2020$Region,levels = c("Core", "Margin", "Edge"))
+
+```
+
+
+
+# Models  {.tabset .tabset-fade .tabset-pills}  
+
+## Growth 2019     
+```{r}
+## working model for growth - ****
+Growth19_mod1 <- lmer(data = growth_2019, na.action = na.omit,
+               Growth ~ Garden * Region +
+               (1|Population) + (1|mBed) +
+               (Garden|Family)) # G x E
+
+Growth19_mod1a <- lmer(data = growth_2019, na.action = na.omit,
+               Growth ~ Garden * Region +
+               (1|Population) + (1|mBed) + (1|Family))
+
+Growth19_mod1b <- lmer(data = growth_2019, na.action = na.omit,
+               Growth ~ Garden * Region +
+               (1|Population) + (1|mBed))
+
+# model 1 anova 
+anova(Growth19_mod1)
+
+# impact of GxE
+anova(Growth19_mod1, Growth19_mod1a) 
+
+# effect of genotype
+anova(Growth19_mod1a, Growth19_mod1b)
+
+# model 1 vs 3
+anova(Growth19_mod1, Growth19_mod1b)
+
+# the effect of genotype has higher magnitude of significance compared to the 
+# effect of GxE
+
+# GxE is of higher magnitude effect when not accounting for family
+anova(Growth19_mod1, Growth19_mod1b)
+
+# LRT 
+anova(Growth19_mod1,Growth19_mod1a,Growth19_mod1b)
+
+# AIC
+AIC(Growth19_mod1,Growth19_mod1a,Growth19_mod1b)
+
+
+# effect size estimates for growth trait
+plot_model(Growth19_mod1, vline.color = "red", sort.est=TRUE, show.values = T, value.offset = .3) + 
+  theme_minimal() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12,face="bold"),
+        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+```
+
+```{r}
+# diagnostic tests for the model
+# sjPlot::plot_model(Growth19_mod1, type = "diag")
+
+tab_model(Growth19_mod1)
+```
+
+## Growth 2020     
+```{r}
+## working model for growth - ****
+Growth_mod1 <- lmer(data = growth_2020, na.action = na.omit,
+               Growth ~ Garden * Region +
+               (1|Population) + (1|mBed) +
+               (Garden|Family)) # G x E
+
+Growth_mod1a <- lmer(data = growth_2020, na.action = na.omit,
+               Growth ~ Garden * Region +
+               (1|Population) + (1|mBed) + (1|Family))
+
+Growth_mod1b <- lmer(data = growth_2020, na.action = na.omit,
+               Growth ~ Garden * Region +
+               (1|Population) + (1|mBed))
+
+# model 1 anova 
+anova(Growth_mod1)
+
+# impact of GxE
+anova(Growth_mod1, Growth_mod1a) 
+
+# effect of genotype
+anova(Growth_mod1a, Growth_mod1b)
+
+# model 1 vs 3
+anova(Growth_mod1, Growth_mod1b)
+
+# the effect of genotype has higher magnitude of significance compared to the 
+# effect of GxE
+
+# GxE is of higher magnitude effect when not accounting for family
+anova(Growth_mod1, Growth_mod1b)
+
+# LRT 
+anova(Growth_mod1,Growth_mod1a,Growth_mod1b)
+
+# AIC
+AIC(Growth_mod1,Growth_mod1a,Growth_mod1b)
+
+
+# effect size estimates for growth trait
+plot_model(Growth_mod1, vline.color = "red", sort.est=TRUE, show.values = T, value.offset = .3) + 
+  theme_minimal() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12,face="bold"),
+        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+```
+
+```{r}
+# diagnostic tests for the model
+# sjPlot::plot_model(Growth19_mod1, type = "diag")
+
+tab_model(Growth_mod1)
+```
+
+## Bud Set 2019    
+```{r}
+budset_2019 <- budset_2019%>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
+
+## working model for growth - ****
+budset19_mod1 <- lmer(data = budset_2019, na.action = na.omit,
+               BudSet ~ Garden * Region +
+               (1|Population) + (1|mBed) +
+               (Garden|Family)) # G x E
+
+budset19_mod1a <- lmer(data = budset_2019, na.action = na.omit,
+               BudSet ~ Garden * Region +
+               (1|Population) + (1|mBed) + (1|Family))
+
+budset19_mod1b <- lmer(data = budset_2019, na.action = na.omit,
+               BudSet ~ Garden * Region +
+               (1|Population) + (1|mBed))
+
+# model 1 anova 
+anova(budset19_mod1)
+
+# impact of GxE
+anova(budset19_mod1, budset19_mod1a) 
+
+# effect of genotype
+anova(budset19_mod1a, budset19_mod1b)
+
+# model 1 vs 3
+anova(budset19_mod1, budset19_mod1b)
+
+# the effect of genotype has higher magnitude of significance compared to the 
+# effect of GxE
+
+# GxE is of higher magnitude effect when not accounting for family
+anova(budset19_mod1, budset19_mod1b)
+
+# LRT 
+anova(budset19_mod1,budset19_mod1a,budset19_mod1b)
+
+# AIC
+AIC(budset19_mod1,budset19_mod1a,budset19_mod1b)
+
+
+# effect size estimates for budset trait
+plot_model(budset19_mod1, vline.color = "red", sort.est=TRUE, show.values = T, value.offset = .3) + 
+  theme_minimal() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12,face="bold"),
+        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+```
+
+```{r}
+tab_model(budset19_mod1)
+```
+
+## Bud Set 2020    
+```{r}
+budset_2020 <- budset_2020%>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
+
+
+## working model for growth - ****
+budset20_mod1 <- lmer(data = budset_2020, na.action = na.omit,
+               BudSet ~ Garden * Region +
+               (1|Population) + (1|mBed) +
+               (Garden|Family)) # G x E
+
+budset20_mod1a <- lmer(data = budset_2020, na.action = na.omit,
+               BudSet ~ Garden * Region +
+               (1|Population) + (1|mBed) + (1|Family))
+
+budset20_mod1b <- lmer(data = budset_2020, na.action = na.omit,
+               BudSet ~ Garden * Region +
+               (1|Population) + (1|mBed))
+
+# model 1 anova 
+anova(budset20_mod1)
+
+# impact of GxE
+anova(budset20_mod1, budset20_mod1a) 
+
+# effect of genotype
+anova(budset20_mod1a, budset20_mod1b)
+
+# model 1 vs 3
+anova(budset20_mod1, budset20_mod1b)
+
+# the effect of genotype has higher magnitude of significance compared to the 
+# effect of GxE
+
+# GxE is of higher magnitude effect when not accounting for family
+anova(budset20_mod1, budset20_mod1b)
+
+# LRT 
+anova(budset20_mod1,budset20_mod1a,budset20_mod1b)
+
+# AIC
+AIC(budset20_mod1,budset20_mod1a,budset20_mod1b)
+
+
+# effect size estimates for budset trait
+plot_model(budset20_mod1, vline.color = "red", sort.est=TRUE, show.values = T, value.offset = .3) + 
+  theme_minimal() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12,face="bold"),
+        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+```
+
+```{r}
+tab_model(budset20_mod1)
+```
+
+## Bud Break 2020   
+- cGDD   
+```{r}
+budbreak_2020 <- budbreak_2020%>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
+
+## working model for growth - ****
+budbreak_mod1 <- lmer(data = budbreak_2020, na.action = na.omit,
+               cGDD ~ Garden * Region +
+               (1|Population) + (1|mBed) +
+               (Garden|Family)) # G x E
+
+budbreak_mod1a <- lmer(data = budbreak_2020, na.action = na.omit,
+               cGDD ~ Garden * Region +
+               (1|Population) + (1|mBed) + (1|Family))
+
+budbreak_mod1b <- lmer(data = budbreak_2020, na.action = na.omit,
+               cGDD ~ Garden * Region +
+               (1|Population) + (1|mBed))
+
+# model 1 anova 
+anova(budbreak_mod1)
+
+# impact of GxE
+anova(budbreak_mod1, budbreak_mod1a) 
+
+# effect of genotype
+anova(budbreak_mod1a, budbreak_mod1b)
+
+# model 1 vs 3
+anova(budbreak_mod1, budbreak_mod1b)
+
+# the effect of genotype has higher magnitude of significance compared to the 
+# effect of GxE
+
+# GxE is of higher magnitude effect when not accounting for family
+anova(budbreak_mod1, budbreak_mod1b)
+
+# LRT 
+anova(budbreak_mod1,budbreak_mod1a,budbreak_mod1b)
+
+# AIC
+AIC(budbreak_mod1,budbreak_mod1a,budbreak_mod1b)
+
+
+# effect size estimates for budbreak trait
+plot_model(budbreak_mod1, vline.color = "red", sort.est=TRUE, show.values = T, value.offset = .3) + 
+  theme_minimal() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12,face="bold"),
+        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+```
+
+```{r}
+tab_model(budbreak_mod1)
+```
+
+# Visaulization  {.tabset .tabset-fade .tabset-pills}    
+
+## Growth 2019 rxn    
+- paper**   
+**Family plot**  
+```{r}
+### Reaction norm for growth
+# remove mbed to get proper reaction norms
+# the presence of mbeds complicates the reaction norm otherwise
+Growth19_mod_nMb <- lmer(data = growth_2019,
+               Growth ~ Garden * Region +
+               (1|Population) + 
+               (Garden|Family))
+
+heightData19 <- growth_2019
+heightData19$pred <- predict(Growth19_mod_nMb)
+
+# merge climateNA data
+heightData19 <- merge(x=heightData19,
+                     y=Population_climateNA[,c("Population","PC1","MAT")],
+                     by="Population")
+
+
+# faceting by regions
+# the geographic region labels are based on the genotypic differences as well
+G19 <- ggplot(heightData19,aes(Garden,Growth))+
+    facet_grid(.~Region)
+    # zero_margin
+
+# Rxn - family
+G19 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                  xlab("Garden site") + ylab("Growth in 2019 (in cm)") +
+  scale_color_viridis(option = "A", direction = -1) +
+  theme_bw() + theme(axis.text=element_text(size=14), 
+                     axis.title=element_text(size=14,face="bold"),
+                     legend.title = element_text(color = "black", size = 14),
+                     legend.text = element_text(color = "black", size = 13))
+
+```
+
+**Region plot**   
+```{r}
+# Rxn - population
+growth19_pop_rxn <- G19 + geom_line(aes(y=pred,group=Family,colour=Population)) +
+                  xlab("Garden site") + ylab("Vertical height growth (in cm)") +
+  theme_minimal() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12,face="bold"),
+        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+
+
+
+
+## Reaction norm for geo genetic groups/regions
+# growth reaction norm
+ggplot(heightData19,
+       aes(x=Garden, y=Growth, color=Region)) +
+  stat_summary(aes(group = Region), fun.y = mean, geom = "path") +
+  stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1) +
+  stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 2) + 
+  # Lines by species using grouping
+  stat_summary(aes(group = Region), geom = "line", fun = mean) +
+  ylab("Growth in 2019 (in cm)") + theme(legend.position="right") +
+  theme_bw() + theme(axis.text=element_text(size=14), 
+                       axis.title=element_text(size=14,face="bold"),
+                       legend.title = element_text(color = "black", size = 14),
+                       legend.text = element_text(color = "black", size = 13)) +
+  scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2"))
+```
+
+
+
+
+## Growth 2020 rxn    
+- paper**   
+**Family plot**  
+```{r}
+### Reaction norm for growth
+# remove mbed to get proper reaction norms
+# the presence of mbeds complicates the reaction norm otherwise
+Growth20_mod_nMb <- lmer(data = growth_2020,
+               Growth ~ Garden * Region +
+               (1|Population) + 
+               (Garden|Family))
+
+heightData20 <- growth_2020
+heightData20$pred <- predict(Growth20_mod_nMb)
+
+# merge climateNA data
+heightData20 <- merge(x=heightData20,
+                     y=Population_climateNA[,c("Population","PC1","MAT")],
+                     by="Population")
+
+
+# faceting by regions
+# the geographic region labels are based on the genotypic differences as well
+G20 <- ggplot(heightData20,aes(Garden,Growth))+
+    facet_grid(.~Region)
+    # zero_margin
+
+# Rxn - family
+G20 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                  xlab("Garden site") + ylab("Growth in 2020 (in cm)") +
+  scale_color_viridis(option = "A", direction = -1) +
+  theme_bw() + theme(axis.text=element_text(size=14), 
+                     axis.title=element_text(size=14,face="bold"),
+                     legend.title = element_text(color = "black", size = 14),
+                     legend.text = element_text(color = "black", size = 13))
+
+```
+
+**Region plot**   
+```{r}
+# Rxn - population
+growth20_pop_rxn <- G20 + geom_line(aes(y=pred,group=Family,colour=Population)) +
+                  xlab("Garden site") + ylab("Vertical height growth (in cm)") +
+  theme_minimal() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12,face="bold"),
+        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+
+
+
+
+## Reaction norm for geo genetic groups/regions
+# growth reaction norm
+ggplot(heightData20,
+       aes(x=Garden, y=Growth, color=Region)) +
+  stat_summary(aes(group = Region), fun.y = mean, geom = "path") +
+  stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1) +
+  stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 2) + 
+  # Lines by species using grouping
+  stat_summary(aes(group = Region), geom = "line", fun = mean) +
+  ylab("Growth in 2020 (in cm)") + theme(legend.position="right") +
+  theme_bw() + theme(axis.text=element_text(size=14), 
+                       axis.title=element_text(size=14,face="bold"),
+                       legend.title = element_text(color = "black", size = 14),
+                       legend.text = element_text(color = "black", size = 13)) +
+  scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2"))
+```
+
+
+
+```{r eval=FALSE, echo=FALSE}
+# ranef(Growth_mod1)
+
+## random intercept and slope models
+Growth_mod2 <- lmer(data = heightData,
+               Growth ~ Garden + Region +
+               # (1|Population) + (1|mBed) +
+               (1 + Garden|Family)) # variance in the random effects
+# as a function of interaction between family and its environment
+
+Growth_mod3 <- lmer(data = heightData,
+               Growth ~ Garden * Region + # interaction between the fixed effects
+               (1 + Garden|Family)) # variance in the random effects
+# as a function of interaction between family and its environment
+
+
+# growth mod 2 is overfitting even with a lower threshold for singularity detection
+# but the interaction between the garden and region in Growth_mod3 is more acceptable
+isSingular(Growth_mod1, tol = 1e-5)
+isSingular(Growth_mod2, tol = 1e-5)
+isSingular(Growth_mod3, tol = 1e-5)
+
+# confint(Growth_mod1)
+# confint(Growth_mod2)
+# confint(Growth_mod3)
+
+summary(Growth_mod1)
+summary(Growth_mod2)
+summary(Growth_mod3)
+
+
+
+```
+
+## Budset 2019    
+
+**Family plot**  
+```{r}
+### Reaction norm for growth
+# remove mbed to get proper reaction norms
+# the presence of mbeds complicates the reaction norm otherwise
+budset19_mod_nMb <- lmer(data = budset_2019,
+               BudSet ~ Garden * Region +
+               (1|Population) + 
+               (Garden|Family))
+
+budset_2019_2 <- budset_2019
+budset_2019_2$pred <- predict(budset19_mod_nMb)
+
+# merge climateNA data
+budset_2019_2 <- merge(x=budset_2019_2,
+                     y=Population_climateNA[,c("Population","PC1","MAT")],
+                     by="Population")
+
+
+# faceting by regions
+# the geographic region labels are based on the genotypic differences as well
+BS19 <- ggplot(budset_2019_2,aes(Garden,BudSet))+
+    facet_grid(.~Region)
+    # zero_margin
+
+# Rxn - family
+BS19 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                  xlab("Garden site") + ylab("Bud set in 2019 (DOY)") +
+  scale_color_viridis(option = "A", direction = -1) +
+  theme_bw() + theme(axis.text=element_text(size=14), 
+                     axis.title=element_text(size=14,face="bold"),
+                     legend.title = element_text(color = "black", size = 14),
+                     legend.text = element_text(color = "black", size = 13))
+
+```
+
+**Region plot**  
+```{r}
+# Rxn - population
+budset19_pop_rxn <- BS19 + geom_line(aes(y=pred,group=Family,colour=Population)) +
+                  xlab("Garden site") + ylab("Bud set in 2019 (DOY)") +
+  theme_minimal() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12,face="bold"),
+        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+
+
+## Reaction norm for geo genetic groups/regions
+# growth reaction norm
+ggplot(budset_2019_2,
+       aes(x=Garden, y=BudSet, color=Region)) +
+  stat_summary(aes(group = Region), fun.y = mean, geom = "path") +
+  stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1) +
+  stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 2) + 
+  # Lines by species using grouping
+  stat_summary(aes(group = Region), geom = "line", fun = mean) +
+  ylab("Bud set in 2019 (DOY)") + theme(legend.position="right") +
+  theme_bw() + theme(axis.text=element_text(size=14), 
+                       axis.title=element_text(size=14,face="bold"),
+                       legend.title = element_text(color = "black", size = 14),
+                       legend.text = element_text(color = "black", size = 13)) +
+  scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2"))
+```
+
+## Budset 2020    
+**Family plot**  
+```{r}
+### Reaction norm for growth
+# remove mbed to get proper reaction norms
+# the presence of mbeds complicates the reaction norm otherwise
+budset20_mod_nMb <- lmer(data = budset_2020,
+               BudSet ~ Garden * Region +
+               (1|Population) + 
+               (Garden|Family))
+
+budset_2020_2 <- budset_2020
+budset_2020_2$pred <- predict(budset20_mod_nMb)
+
+# merge climateNA data
+budset_2020_2 <- merge(x=budset_2020_2,
+                     y=Population_climateNA[,c("Population","PC1","MAT")],
+                     by="Population")
+
+
+# faceting by regions
+# the geographic region labels are based on the genotypic differences as well
+BS20 <- ggplot(budset_2020_2,aes(Garden,BudSet))+
+    facet_grid(.~Region)
+    # zero_margin
+
+# Rxn - family
+BS20 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                  xlab("Garden site") + ylab("Bud set in 2020 (DOY)") +
+  scale_color_viridis(option = "A", direction = -1) +
+  theme_bw() + theme(axis.text=element_text(size=14), 
+                     axis.title=element_text(size=14,face="bold"),
+                     legend.title = element_text(color = "black", size = 14),
+                     legend.text = element_text(color = "black", size = 13))
+
+```
+
+**Region plot**  
+```{r}
+# Rxn - population
+budset20_pop_rxn <- BS20 + geom_line(aes(y=pred,group=Family,colour=Population)) +
+                  xlab("Garden site") + ylab("Bud set in 2020 (DOY)") +
+  theme_minimal() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12,face="bold"),
+        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+
+
+## Reaction norm for geo genetic groups/regions
+# growth reaction norm
+ggplot(budset_2020_2,
+       aes(x=Garden, y=BudSet, color=Region)) +
+  stat_summary(aes(group = Region), fun.y = mean, geom = "path") +
+  stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1) +
+  stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 2) + 
+  # Lines by species using grouping
+  stat_summary(aes(group = Region), geom = "line", fun = mean) +
+  ylab("Bud set in 2020 (DOY)") + theme(legend.position="right") +
+  theme_bw() + theme(axis.text=element_text(size=14), 
+                       axis.title=element_text(size=14,face="bold"),
+                       legend.title = element_text(color = "black", size = 14),
+                       legend.text = element_text(color = "black", size = 13)) +
+  scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2"))
+```
+
+
+
+
+## Bud Break 2020    
+
+**Family plot**   
+```{r}
+### Reaction norm for growth
+# remove mbed to get proper reaction norms
+# the presence of mbeds complicates the reaction norm otherwise
+budbreak_mod_nMb <- lmer(data = budbreak_2020,
+               cGDD ~ Garden * Region +
+               (1|Population) + 
+               (Garden|Family))
+
+budbreak <- budbreak_2020[!is.na(budbreak_2020$cGDD),]
+budbreak$pred <- predict(budbreak_mod_nMb)
+
+# merge climateNA data
+budbreak <- merge(x=budbreak,
+                   y=Population_climateNA[,c("Population","PC1","MAT")],
+                   by="Population")
+
+# faceting by regions
+# the geographic region labels are based on the genotypic differences as well
+BB20 <- ggplot(budbreak,aes(Garden,cGDD))+
+    facet_grid(.~Region)
+    # zero_margin
+
+# Rxn - family
+BB20 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                  xlab("Garden site") + ylab("Bud break in 2020 (cGDD)") +
+  scale_color_viridis(option = "A", direction = -1) +
+  theme_bw() + theme(axis.text=element_text(size=14), 
+                     axis.title=element_text(size=14,face="bold"),
+                     legend.title = element_text(color = "black", size = 14),
+                     legend.text = element_text(color = "black", size = 13))
+
+```
+
+**Region plot**   
+```{r}
+# Rxn - population
+budbreak_pop_rxn <- BB20 + geom_line(aes(y=pred,group=Family,colour=Population)) +
+                  xlab("Garden site") + ylab("cGDD") +
+  theme_minimal() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12,face="bold"),
+        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+
+
+## Reaction norm for geo genetic groups/regions
+ggplot(budbreak,
+       aes(x=Garden, y=cGDD, color=Region)) +
+  stat_summary(aes(group = Region), fun.y = mean, geom = "path") +
+  stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1) +
+  stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 2) + 
+  # Lines by species using grouping
+  stat_summary(aes(group = Region), geom = "line", fun = mean) +
+  ylab("Bud break in 2020 (cGDD)") + theme(legend.position="right") +
+  theme_bw() + theme(axis.text=element_text(size=14), 
+                       axis.title=element_text(size=14,face="bold"),
+                       legend.title = element_text(color = "black", size = 14),
+                       legend.text = element_text(color = "black", size = 13)) +
+  scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2"))
+```
+
+
+
+
+
+
+
+# Bud Break 2020  - cCDD  {.tabset .tabset-fade .tabset-pills}  
+## Models  
+```{r}
+budbreak_cCDD <- read.csv("C:\\Dropbox\\UVM\\Research\\Code/CommonGardenTraits/2020/BudBreak_2020_cCDD.csv", header=T,
+                        stringsAsFactors = T)
+# reordering factors
+budbreak_cCDD$Region <- factor(budbreak_cCDD$Region,
+                       levels = c("Core", "Margin", "Edge"))
+budbreak_cCDD$Garden <- factor(budbreak_cCDD$Garden,
+                       levels = c("Vermont", "Maryland", "North_Carolina"))
+budbreak_cCDD <- budbreak_cCDD%>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
+
+
+
+
+
+## working model for cCDD - ****
+budbreak_cCDD_mod1 <- lmer(data = budbreak_cCDD,
+               cCDD ~ Garden * Region +
+               (1|Population) + (1|mBed) +
+               (Garden|Family), na.action = na.omit) # G x E
+
+budbreak_cCDD_mod1a <- lmer(data = budbreak_cCDD,
+               cCDD ~ Garden * Region +
+               (1|Population) + (1|mBed) + (1|Family), na.action = na.omit)
+
+budbreak_cCDD_mod1b <- lmer(data = budbreak_cCDD,
+               cCDD ~ Garden * Region +
+               (1|Population) + (1|mBed), na.action = na.omit)
+
+# model 1 anova 
+anova(budbreak_cCDD_mod1)
+
+# impact of GxE
+anova(budbreak_cCDD_mod1, budbreak_cCDD_mod1a) 
+
+# effect of genotype
+anova(budbreak_cCDD_mod1a, budbreak_cCDD_mod1b)
+
+# model 1 vs 3
+anova(budbreak_cCDD_mod1, budbreak_cCDD_mod1b)
+
+# the effect of genotype has higher magnitude of significance compared to the 
+# effect of GxE
+
+# GxE is of higher magnitude effect when not accounting for family
+anova(budbreak_cCDD_mod1, budbreak_cCDD_mod1b)
+
+# LRT 
+anova(budbreak_cCDD_mod1,budbreak_cCDD_mod1a,budbreak_cCDD_mod1b)
+
+# AIC
+AIC(budbreak_cCDD_mod1,budbreak_cCDD_mod1a,budbreak_cCDD_mod1b)
+
+
+# effect size estimates for budbreak_cCDD trait
+plot_model(budbreak_cCDD_mod1, vline.color = "red", sort.est=TRUE, show.values = T, value.offset = .3) + 
+  theme_minimal() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12,face="bold"),
+        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+```
+
+## Reaction norm - part 1  
+```{r}
+# reaction norms for interactions
+sjPlot::plot_model(budbreak_cCDD_mod1, type = "int")
+sjPlot::plot_model(budbreak_cCDD_mod1, type = "re")
+
+##### reaction norms based on the model - Family
+budbreak_cCDD3 <- budbreak_cCDD[!is.na(budbreak_cCDD$cCDD),]
+
+# budbreak_cCDD2$pred <- predict(budbreak_cCDD_mod1, re.form=NULL) # all random effects are included
+
+budbreak_cCDD3$pred <- predict(budbreak_cCDD_mod1,re.form=NA)  ## population level
+budbreak_cCDD3$pred1 <- predict(budbreak_cCDD_mod1) ## individual level
+
+g0 <- ggplot(budbreak_cCDD3,aes(Garden,cCDD, label=Family))+
+    geom_point()+
+    geom_line(aes(group=Family)) +
+    facet_grid(.~Region)
+    # zero_margin
+g0 +   geom_line(colour="blue",aes(y=pred1,group=Family)) +
+    geom_line(colour="red",aes(y=pred,group=Family)) 
+
+##### reaction norms based on the model - Population
+
+g0 <- ggplot(budbreak_cCDD3,aes(Garden,cCDD))+
+    geom_point()+
+    geom_line(aes(group=Population)) +
+    facet_grid(.~Region)
+    # zero_margin
+g0 +   geom_line(colour="blue",aes(y=pred1,group=Population)) +
+    geom_line(colour="red",aes(y=pred,group=Population))
+```
+
+## Reaction norm - Part 2  
+```{r}
+# reaction norms based on the model - Family
+budbreak_cCDD3 <- budbreak_cCDD[!is.na(budbreak_cCDD$cCDD),]
+
+# budbreak_cCDD2$pred <- predict(budbreak_cCDD_mod1, re.form=NULL) # all random effects are included
+
+budbreak_cCDD3$pred <- predict(budbreak_cCDD_mod1,re.form=NA)  ## population level/ no random effects included
+budbreak_cCDD3$pred1 <- predict(budbreak_cCDD_mod1) ## individual level
+
+G0 <- ggplot(budbreak_cCDD3,aes(Garden,cCDD))+
+    # geom_point()+
+    # geom_line(aes(group=Family)) +
+    facet_grid(.~Region) #+ zero_margin
+
+
+G0 + geom_line(colour="red",aes(y=pred,group=Family))  +
+                  xlab("Garden site") + ylab("Vertical height growth (in cm)") +
+  theme_minimal() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12,face="bold"),
+        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+```
+
+
+**budbreak_cCDD 2020 rxn - paper** 
+```{r}
+### Reaction norm for growth
+# remove mbed to get proper reaction norms
+# the presence of mbeds complicates the reaction norm otherwise
+budbreak_cCDD_mod_nMb <- lmer(data = budbreak_cCDD,
+               cCDD ~ Garden * Region +
+               (1|Population) + 
+               (Garden|Family), na.action = na.omit)
+
+budbreak_cCDD6 <- budbreak_cCDD3
+budbreak_cCDD6$pred <- predict(budbreak_cCDD_mod_nMb)
+
+# merge climateNA data
+budbreak_cCDD6 <- merge(x=budbreak_cCDD6,
+                   y=Population_climateNA[,c("Population","PC1","MAT")],
+                   by="Population")
+
+# faceting by regions
+# the geographic region labels are based on the genotypic differences as well
+G0 <- ggplot(budbreak_cCDD6,aes(Garden,cCDD))+
+    facet_grid(.~Region)
+    # zero_margin
+
+# Rxn - family
+G0 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                  xlab("Garden site") + ylab("Bud break in 2020 (cCDD)") +
+  scale_color_viridis(option = "A", direction = -1) +
+  theme_bw() + theme(axis.text=element_text(size=14), 
+                     axis.title=element_text(size=14,face="bold"),
+                     legend.title = element_text(color = "black", size = 14),
+                     legend.text = element_text(color = "black", size = 13))
+
+```
+
+
+```{r}
+# Rxn - population
+budbreak_cCDD_pop_rxn <- G0 + geom_line(aes(y=pred,group=Family,colour=Population)) +
+                  xlab("Garden site") + ylab("cCDD") +
+  theme_minimal() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12,face="bold"),
+        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+
+plotly::ggplotly(budbreak_cCDD_pop_rxn)
+
+budbreak_cCDD_pop_rxn
+
+## Reaction norm for geo genetic groups/regions
+# growth reaction norm
+ggplot(budbreak_cCDD3, aes(x = Garden, y = cCDD, color = Region)) +
+  stat_summary(aes(group = Region), fun = mean, geom = "path") +
+  stat_summary(aes(color = Region), fun.data = mean_cl_boot, 
+               geom = "errorbar", width = 0.1) +
+  stat_summary(aes(color = Region), fun = mean, geom = "point", size = 4) +
+  # geom_point(aes(color = Region), size = 2) +
+  theme_minimal() + ylab("cCDD") + 
+  theme(text = element_text(size=12),
+        axis.text.x = element_text(angle=0))
+
+
+
+
+
+
+```
+
+## Reaction norm - Part 3  
+```{r}
+ggplot(budbreak_cCDD3,
+       aes(x=Garden, y=cCDD, color=Region)) +
+  stat_summary(aes(group = Region), fun.y = mean, geom = "path") +
+  stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1) +
+  stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 2) + 
+  # Lines by species using grouping
+  stat_summary(aes(group = Region), geom = "line", fun = mean) +
+  ylab("Bud break in 2020 (cCDD)") + theme(legend.position="right") +
+  theme_bw() + theme(axis.text=element_text(size=14), 
+                       axis.title=element_text(size=14,face="bold"),
+                       legend.title = element_text(color = "black", size = 14),
+                       legend.text = element_text(color = "black", size = 13)) +
+  scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2"))
+```
+
+
+
+```{r}
+# diagnostic tests for the model
+sjPlot::plot_model(budbreak_cCDD_mod1, type = "diag")
+
+tab_model(budbreak_cCDD_mod1)
+```
+
