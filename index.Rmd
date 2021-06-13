@@ -27,7 +27,7 @@ Sl No. | Scripts                                                                
    3   | [Genetic correlation model ](./3_genetic_correlation_MCMCmodel_final.R)                                | [Genetic Correlation](./4_genetic_correlation_plots.html) 
    4   | [Climate transfer distance](./5_traitPlasticity_TD.Rmd)                                                | [Climate transfer distance](./5_traitPlasticity_TD.html) 
    5   | [Trait Platicity](./6_traitPlasticity.R)                                                               | [Trait Platicity](./7_traitPlasticity_family_and_pop_blup_plots.html)   
-   6   | [Reflush ](./10_Reflush_2020.Rmd)                                                                      | [Reflush ](./10_Reflush_2020.html)   
+   6   | [PCA and Plasticity ](./10_PCA_and_Plasticity.Rmd)                                                                      | [PCA and Plasticity ](./10_PCA_and_Plasticity.html)   
    
    Still working:  
    Trait variance partition: [script](./9_trait_variance_partition_Region_plots.Rmd) ; [html](./9_trait_variance_partition_Region_plots.html)  

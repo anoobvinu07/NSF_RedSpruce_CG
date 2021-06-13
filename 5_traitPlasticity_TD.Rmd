@@ -2,7 +2,7 @@
 title: "Trait Plasticity based on climate transfer distance"
 author: "Anoob Prakash"
 date: "03/03/2021"
-output: html_document
+output:
   rmarkdown::html_document:
     theme: cosmo  
     number_sections: false
@@ -132,24 +132,25 @@ budsetPlasticity_2019 <- merge(x=budsetPlasticity_2019,
 
 **Budset 2019 v CTD**  
 ```{r}
+budset_2019$mBed <- paste0(budset_2019$Region,"_",budset_2019$Bed)
 
 budset_2019$Region <- factor(budset_2019$Region,levels = c("Core", "Margin", "Edge")) 
 
-budset_2019_modTD <- lmer(BudSet ~ Garden * Region + TD + (1|Family) + (1|Population), data=budset_2019)
+budset_2019_modTD <- lmer(BudSet ~ Garden * TD + Region + (1|Family) + (1|Population) + (1|mBed), data=budset_2019)
 summary(budset_2019_modTD)
 
 # trait vs TD
-ggplot(data=budset_2019,
-         aes(x= TD,y=BudSet, color=Region)) + 
-          geom_point(aes(shape = Region), size=2, alpha = 0.2) + 
-            geom_smooth(method='lm', se=F, formula=y~poly(x,2)) +
-              scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2")) +
-                labs(x = "Climate Transfer Distance", 
-                     y = "Bud set in 2019 (DOY)") + 
-                  theme_bw() + theme(axis.text=element_text(size=14), 
-                       axis.title=element_text(size=14,face="bold"),
-                       legend.title = element_text(color = "black", size = 14),
-                       legend.text = element_text(color = "black", size = 13))
+budset2019_TD <-      ggplot(data=budset_2019,
+                           aes(x= TD,y=BudSet, color=Region)) + 
+                            geom_point(aes(shape = Region), size=2, alpha = 0.2) + 
+                              geom_smooth(method='lm', se=F, formula=y~poly(x,2)) +
+                                scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2")) +
+                                  labs(x = "Climate Transfer Distance", 
+                                       y = "Bud set in 2019 (DOY)") + 
+                                    theme_bw() + theme(axis.text=element_text(size=14), 
+                                         axis.title=element_text(size=14,face="bold"),
+                                         legend.title = element_text(color = "black", size = 14),
+                                         legend.text = element_text(color = "black", size = 13))
 ```
 
 
@@ -163,6 +164,14 @@ colnames(budset_2019_away)[colnames(budset_2019_away)=="BudSet_2019"] <- "away"
 budsetPlasticity_2019 <- merge(x=budset_2019_home[,-c("TD","TD2")],
                                y=budset_2019_away[,c("Family","away")],
                                by="Family")
+# # file for step 10
+# file10_bs19 <- budsetPlasticity_2019
+# file10_bs19$Trait <- "BudSet2019"
+# file10_bs19 <- file10_bs19 %>% tidyr::pivot_longer(cols=c("home","away"),
+#                                                            names_to = "Environment",
+#                                                            values_to = "value")
+
+
 budsetPlasticity_2019$BudSet2019_Plasticity <- (budsetPlasticity_2019$home - budsetPlasticity_2019$away)/budsetPlasticity_2019$home
 
 ```
@@ -251,33 +260,41 @@ colnames(budset_2020_away)[colnames(budset_2020_away)=="BudSet_2020"] <- "away"
 budsetPlasticity_2020 <- merge(x=budset_2020_home[,-c("TD","TD2")],
                                y=budset_2020_away[,c("Family","away")],
                                by="Family")
+
+# # file for step 10
+# file10_bs20 <- budsetPlasticity_2020
+# file10_bs20$Trait <- "BudSet2020"
+# file10_bs20 <- file10_bs20 %>% tidyr::pivot_longer(cols=c("home","away"),
+#                                                            names_to = "Environment",
+#                                                            values_to = "value")
+
+
 budsetPlasticity_2020$BudSet2020_Plasticity <- (budsetPlasticity_2020$home - budsetPlasticity_2020$away)/budsetPlasticity_2020$home
 ```
 
 **Budset 2020 v CTD**  
 ```{r}
 
+budset_2020$mBed <- paste0(budset_2020$Region,"_",budset_2020$Bed)
+
 budset_2020$Region <- factor(budset_2020$Region,levels = c("Core", "Margin", "Edge")) 
 
-budset_2020_modTD <- lmer(BudSet ~ Garden * Region + TD + (1|Family) + (1|Population), data=budset_2020)
+budset_2020_modTD <- lmer(BudSet ~ Garden * TD + Region + (1|Family) + (1|Population) + (1|mBed), data=budset_2020)
 summary(budset_2020_modTD)
 
 # trait vs TD
-ggplot(data=budset_2020,
-         aes(x= TD,y=BudSet, color=Region)) + 
-          geom_point(aes(shape = Region), size=2, alpha = 0.2) + 
-            geom_smooth(method='lm', se=F, formula=y~poly(x,2)) +
-              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue")) +
-                labs(x = "Climate Transfer Distance", 
-                     y = "Bud set in 2020 (DOY)") + 
-                  theme_bw() + theme(axis.text=element_text(size=14), 
-                       axis.title=element_text(size=14,face="bold"),
-                       legend.title = element_text(color = "black", size = 14),
-                       legend.text = element_text(color = "black", size = 13))
+budset2020_TD <-      ggplot(data=budset_2020,
+                           aes(x= TD,y=BudSet, color=Region)) + 
+                            geom_point(aes(shape = Region), size=2, alpha = 0.2) + 
+                              geom_smooth(method='lm', se=F, formula=y~poly(x,2)) +
+                                scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue")) +
+                                  labs(x = "Climate Transfer Distance", 
+                                       y = "Bud set in 2020 (DOY)") + 
+                                    theme_bw() + theme(axis.text=element_text(size=14), 
+                                         axis.title=element_text(size=14,face="bold"),
+                                         legend.title = element_text(color = "black", size = 14),
+                                         legend.text = element_text(color = "black", size = 13))
 ```
-
-
-
 
 # Bud break 2020  
 ```{r}
@@ -359,27 +376,27 @@ ggplot(data=budbreak_2020,
 
 **Budbreak 2020 v CTD**  
 ```{r}
-
 budbreak_2020$Region <- factor(budbreak_2020$Region,levels = c("Core", "Margin", "Edge")) 
 budbreak_2020 <- budbreak_2020 %>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
   
-budbreak_2020_modTD <- lmer(cGDD ~ Garden * Region + TD + (1|Family) + (1|Population) + (1|mBed),
+budbreak_2020_modTD <- lmer(cGDD ~ Garden * TD + Region + (1|Family) + (1|Population) + (1|mBed),
                             data=budbreak_2020, na.action = na.exclude)
 summary(budbreak_2020_modTD)
 
 # trait vs TD
-ggplot(data=budbreak_2020,
-         aes(x= TD,y=cGDD, color=Region)) + 
-          geom_point(aes(shape = Region), size=2, alpha = 0.1) + 
-            geom_smooth(method='lm', se=F, formula=y~poly(x,2)) +
-              scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2")) +
-                labs(x = "Climate Transfer Distance", 
-                     y = "Bud break in 2020 (cGDD)") + 
-                  theme_bw() + theme(axis.text=element_text(size=14), 
-                       axis.title=element_text(size=14,face="bold"),
-                       legend.title = element_text(color = "black", size = 14),
-                       legend.text = element_text(color = "black", size = 13))
+budbreak2020_TD <-   ggplot(data=budbreak_2020,
+                         aes(x= TD,y=cGDD, color=Region)) + 
+                          geom_point(aes(shape = Region), size=2, alpha = 0.1) + 
+                            geom_smooth(method='lm', se=F, formula=y~poly(x,2)) +
+                              scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2")) +
+                                labs(x = "Climate Transfer Distance", 
+                                     y = "Bud break in 2020 (cGDD)") + 
+                                  theme_bw() + theme(axis.text=element_text(size=14), 
+                                       axis.title=element_text(size=14,face="bold"),
+                                       legend.title = element_text(color = "black", size = 14),
+                                       legend.text = element_text(color = "black", size = 13))
 ```
+
 
 ```{r}
 budbreakPlasticity_2020 <- as.data.table(budbreakPlasticity_2020)
@@ -391,6 +408,15 @@ colnames(budbreak_2020_away)[colnames(budbreak_2020_away)=="BudBreak_2020"] <- "
 budbreakPlasticity_2020 <- merge(x=budbreak_2020_home[,-c("TD","TD2")],
                                y=budbreak_2020_away[,c("Family","away")],
                                by="Family")
+
+# # file for step 10
+# file10_bb20 <- budbreakPlasticity_2020
+# file10_bb20$Trait <- "BudBreak2020"
+# file10_bb20 <- file10_bb20 %>% tidyr::pivot_longer(cols=c("home","away"),
+#                                                            names_to = "Environment",
+#                                                            values_to = "value")
+
+
 budbreakPlasticity_2020$BudBreak2020_Plasticity <- (budbreakPlasticity_2020$home - budbreakPlasticity_2020$away)/budbreakPlasticity_2020$home
 ```
 
@@ -478,6 +504,16 @@ colnames(heightGrowth_2019_away)[colnames(heightGrowth_2019_away)=="Growth_2019"
 growthPlasticity_2019 <- merge(x=heightGrowth_2019_home[,-c("TD","TD2")],
                                y=heightGrowth_2019_away[,c("Family","away")],
                                by="Family")
+
+
+# # file for step 10
+# file10_gw19 <- growthPlasticity_2019
+# file10_gw19$Trait <- "Growth2019"
+# file10_gw19 <- file10_gw19 %>% tidyr::pivot_longer(cols=c("home","away"),
+#                                                            names_to = "Environment",
+#                                                            values_to = "value")
+
+
 growthPlasticity_2019$growth2019_Plasticity <- (growthPlasticity_2019$home - growthPlasticity_2019$away)/growthPlasticity_2019$home
 ```
 
@@ -487,23 +523,24 @@ growthPlasticity_2019$growth2019_Plasticity <- (growthPlasticity_2019$home - gro
 heightGrowth_2019$Region <- factor(heightGrowth_2019$Region,levels = c("Core", "Margin", "Edge")) 
 heightGrowth_2019 <- heightGrowth_2019 %>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
   
-heightGrowth_2019_modTD <- lmer(Growth ~ Garden * Region + TD + (1|Family) + (1|Population) + (1|mBed),
+heightGrowth_2019_modTD <- lmer(Growth ~ Garden * TD + Region + (1|Family) + (1|Population) + (1|mBed),
                             data=heightGrowth_2019, na.action = na.exclude)
 summary(heightGrowth_2019_modTD)
 
 # trait vs TD
-ggplot(data=heightGrowth_2019,
-         aes(x= TD,y=Growth, color=Region)) + 
-          geom_point(aes(shape = Region), size=2, alpha = 0.1) + 
-            geom_smooth(method='lm', se=F, formula=y~poly(x,2)) +
-              scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2")) +
-                labs(x = "Climate Transfer Distance", 
-                     y = "Growth in 2019") + 
-                  theme_bw() + theme(axis.text=element_text(size=14), 
-                       axis.title=element_text(size=14,face="bold"),
-                       legend.title = element_text(color = "black", size = 14),
-                       legend.text = element_text(color = "black", size = 13))
+growth2019_TD <-     ggplot(data=heightGrowth_2019,
+                         aes(x= TD,y=Growth, color=Region)) + 
+                          geom_point(aes(shape = Region), size=2, alpha = 0.1) + 
+                            geom_smooth(method='lm', se=F, formula=y~poly(x,2)) +
+                              scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2")) +
+                                labs(x = "Climate Transfer Distance", 
+                                     y = "Growth in 2019") + 
+                                  theme_bw() + theme(axis.text=element_text(size=14), 
+                                       axis.title=element_text(size=14,face="bold"),
+                                       legend.title = element_text(color = "black", size = 14),
+                                       legend.text = element_text(color = "black", size = 13))
 ```
+
 
 # Growth 2020  
 ```{r}
@@ -586,27 +623,27 @@ ggplot(data=heightGrowth_2020,
 
 **Growth 2020 v CTD**  
 ```{r}
-
 heightGrowth_2020$Region <- factor(heightGrowth_2020$Region,levels = c("Core", "Margin", "Edge")) 
 heightGrowth_2020 <- heightGrowth_2020 %>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
   
-heightGrowth_2020_modTD <- lmer(Growth ~ Garden * Region + TD + (1|Family) + (1|Population) + (1|mBed),
+heightGrowth_2020_modTD <- lmer(Growth ~ Garden * TD + Region + (1|Family) + (1|Population) + (1|mBed),
                             data=heightGrowth_2020, na.action = na.exclude)
 summary(heightGrowth_2020_modTD)
 
 # trait vs TD
-ggplot(data=heightGrowth_2020,
-         aes(x= TD,y=Growth, color=Region)) + 
-          geom_point(aes(shape = Region), size=2, alpha = 0.1) + 
-            geom_smooth(method='lm', se=F, formula=y~poly(x,2)) +
-              scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2")) +
-                labs(x = "Climate Transfer Distance", 
-                     y = "Growth in 2020") + 
-                  theme_bw() + theme(axis.text=element_text(size=14), 
-                       axis.title=element_text(size=14,face="bold"),
-                       legend.title = element_text(color = "black", size = 14),
-                       legend.text = element_text(color = "black", size = 13))
+growth2020_TD <-     ggplot(data=heightGrowth_2020,
+                         aes(x= TD,y=Growth, color=Region)) + 
+                          geom_point(aes(shape = Region), size=2, alpha = 0.1) + 
+                            geom_smooth(method='lm', se=F, formula=y~poly(x,2)) +
+                              scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2")) +
+                                labs(x = "Climate Transfer Distance", 
+                                     y = "Growth in 2020") + 
+                                  theme_bw() + theme(axis.text=element_text(size=14), 
+                                       axis.title=element_text(size=14,face="bold"),
+                                       legend.title = element_text(color = "black", size = 14),
+                                       legend.text = element_text(color = "black", size = 13))
 ```
+
 
 ```{r}
 growthPlasticity_2020 <- as.data.table(growthPlasticity_2020)
@@ -618,6 +655,16 @@ colnames(heightGrowth_2020_away)[colnames(heightGrowth_2020_away)=="Growth_2020"
 growthPlasticity_2020 <- merge(x=heightGrowth_2020_home[,-c("TD","TD2")],
                                y=heightGrowth_2020_away[,c("Family","away")],
                                by="Family")
+
+# # file for step 10
+# file10_gw20 <- growthPlasticity_2020
+# file10_gw20$Trait <- "Growth2020"
+# file10_gw20 <- file10_gw20 %>% tidyr::pivot_longer(cols=c("home","away"),
+#                                                            names_to = "Environment",
+#                                                            values_to = "value")
+
+
+
 growthPlasticity_2020$growth2020_Plasticity <- (growthPlasticity_2020$home - growthPlasticity_2020$away)/growthPlasticity_2020$home
 ```
 
@@ -637,5 +684,55 @@ Plasticity_TD <- merge(x=Plasticity_TD,y=growthPlasticity_2020[,c("Family","grow
 table(heightGrowth_2020_home$Garden)
 
 table(heightGrowth_2020_away$Garden)
+```
+
+**File for Step 10 - Home vs Away  
+```{r}
+
+# file10 <- rbind(file10_bs19,file10_bs20,file10_bb20,file10_gw19,file10_gw20)
+# 
+# write.csv(file10, "./trait_data/Home_vs_Away.csv")
+
+```
+
+# Trait vs Climate Transfer Distance  {.tabset .tabset-fade .tabset-pills}
+## Budset 2019  
+```{r}
+budset2019_TD
+
+# budset_2019_modTD <- lmer(BudSet ~ Garden * TD + Region + (1|Family) + (1|Population) + (1|mBed), data=budset_2019)
+summary(budset_2019_modTD)
+```
+
+## Budset 2020  
+```{r}
+budset2020_TD
+
+# budset_2020_modTD <- lmer(BudSet ~ Garden * TD + Region + (1|Family) + (1|Population) + (1|mBed), data=budset_2020)
+summary(budset_2020_modTD)
+```
+
+## Budbreak 2020  
+```{r}
+budbreak2020_TD
+  
+# budbreak_2020_modTD <- lmer(cGDD ~ Garden * TD + Region + (1|Family) + (1|Population) + (1|mBed), data=budbreak_2020, na.action = na.exclude)
+summary(budbreak_2020_modTD)
+```
+
+## Growth 2019  
+```{r}
+growth2019_TD 
+
+# heightGrowth_2019_modTD <- lmer(Growth ~ Garden * TD + Region + (1|Family) + (1|Population) + (1|mBed), data=heightGrowth_2019, na.action = na.exclude)
+summary(heightGrowth_2019_modTD)
+```
+
+## Growth 2020  
+```{r}
+growth2020_TD 
+  
+# heightGrowth_2020_modTD <- lmer(Growth ~ Garden * TD + Region + (1|Family) + (1|Population) + (1|mBed), data=heightGrowth_2020, na.action = na.exclude)
+summary(heightGrowth_2020_modTD)
 ```
 
