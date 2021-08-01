@@ -17,7 +17,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 **Affiliation** : Keller Lab; Department of Plant Biology, University of Vermont\
 **E-mail contact**: [anoob.prakash\@uvm.edu](mailto:anoob.prakash@uvm.edu){.email}\
-**github repo** : [\<https://github.com/anoobvinu07/NSF_RedSpruce_CG\>](https://github.com/anoobvinu07/NSF_RedSpruce_CG){.uri}
+**GitHub repository** : [repo](https://github.com/anoobvinu07/NSF_RedSpruce_CG){.uri}  
+**License** : [CC0-1.0](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/LICENSE)
 
 +-----------------+-----------------------------------------------------------+-------------------------------------------------------------------+
 |                 | Main Text                                                 | Supplementary                                                     |
