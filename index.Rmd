@@ -1,5 +1,5 @@
 ---
-title: "Evoultion of gentoypic variation and plasticity in climate adaptive traits of red spruce (*Picea rubens* Sarg.)"
+title: "Genotypic variation and plasticity in climate-adaptive traits after range expansion and fragmentation of red spruce (*Picea rubens* Sarg.)"
 author: "Anoob Prakash"
 output:
   rmarkdown::html_document:
@@ -7,6 +7,8 @@ output:
     number_sections: false
     toc: true
     toc_float: true
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -19,7 +21,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 +-----------------+-----------------------------------------------------------+-------------------------------------------------------------------+
 |                 | Main Text                                                 | Supplementary                                                     |
-+=================+===========================================================+===================================================================+
++:===============:+:=========================================================:+:=================================================================:+
 | Trait Data      | [Bud Break (2020)](./data/trait_data/BudBreak_2020.csv)   |                                                                   |
 |                 |                                                           |                                                                   |
 |                 | [Bud Set (2019)](./data/trait_data/BudSet_2019.csv)       |                                                                   |
@@ -39,7 +41,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 +--------+------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------+
 | Sl No. | Scripts                                                                                              | Visualizations                                                        |
-+========+======================================================================================================+=======================================================================+
++:======:+:====================================================================================================:+:=====================================================================:+
 | 1      | [Heritability estimation](./1_heritability.R) ; [Heritability](./2_heritability_values_per_garden.R) | NA                                                                    |
 +--------+------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------+
 | 2      | [Genetic variation and GxE](./0_reaction_norms.Rmd)                                                  | [Genetic variation and GxE](./0_reaction_norms.html)                  |
@@ -53,8 +55,7 @@ knitr::opts_chunk$set(echo = TRUE)
 | 6      | [PCA and Plasticity](./10_PCA_and_Plasticity.Rmd)                                                    | [PCA and Plasticity](./10_PCA_and_Plasticity.html)                    |
 +--------+------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------+
 
-Still working:\
-Trait variance partition: [script](./9_trait_variance_partition_Region_plots.Rmd) ; [html](./9_trait_variance_partition_Region_plots.html)
+
 
 <!-- ```{r pressure, echo=FALSE, fig.cap="Fig. 1. The genealogy of a sample of five alleles, showing the time intervals between coalescent events (Hudson, 1990)", out.width = '60%'} -->
 
