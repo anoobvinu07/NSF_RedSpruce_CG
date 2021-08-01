@@ -7,35 +7,57 @@ output:
     number_sections: false
     toc: true
     toc_float: true
-
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-**Affiliation**   :  Keller Lab; Department of Plant Biology, University of Vermont  
-**E-mail contact**:  anoob.prakash@uvm.edu  
-**github repo**   :  https://github.com/anoobvinu07/NSF_RedSpruce_CG  
+**Affiliation** : Keller Lab; Department of Plant Biology, University of Vermont\
+**E-mail contact**: [anoob.prakash\@uvm.edu](mailto:anoob.prakash@uvm.edu){.email}\
+**github repo** : [\<https://github.com/anoobvinu07/NSF_RedSpruce_CG\>](https://github.com/anoobvinu07/NSF_RedSpruce_CG){.uri}
 
++-----------------+-----------------------------------------------------------+-------------------------------------------------------------------+
+|                 | Main Text                                                 | Supplementary                                                     |
++=================+===========================================================+===================================================================+
+| Trait Data      | [Bud Break (2020)](./data/trait_data/BudBreak_2020.csv)   |                                                                   |
+|                 |                                                           |                                                                   |
+|                 | [Bud Set (2019)](./data/trait_data/BudSet_2019.csv)       |                                                                   |
+|                 |                                                           |                                                                   |
+|                 | [Bud Set (2020)](./data/trait_data/BudSet_2020.csv)       |                                                                   |
+|                 |                                                           |                                                                   |
+|                 | [Growth (2019)](./data/trait_data/Growth_2019.csv)        |                                                                   |
+|                 |                                                           |                                                                   |
+|                 | [Growth (2020)](./data/trait_data/Growth_2020.csv)        |                                                                   |
++-----------------+-----------------------------------------------------------+-------------------------------------------------------------------+
+| Plasticity Data | [Complete data](./data/plasticity_data/Plasticity_TD.csv) | [Bud break (DOY)](./data/plasticity_data/Plasticity_TD_bbDOY.csv) |
++-----------------+-----------------------------------------------------------+-------------------------------------------------------------------+
+| PC scores       |                                                           |                                                                   |
++-----------------+-----------------------------------------------------------+-------------------------------------------------------------------+
 
+: Data
 
-Sl No. | Scripts                                                                                                | Visualizations                            
------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------  
-   1   | [Heritability estimation](./1_heritability.R) ; [Heritability ](./2_heritability_values_per_garden.R)  | NA
-   2   | [Genetic variation and GxE](./0_reaction_norms.Rmd)                                                    | [Genetic variation and GxE](./0_reaction_norms.html)  
-   3   | [Genetic correlation model ](./3_genetic_correlation_MCMCmodel_final.R)                                | [Genetic Correlation](./4_genetic_correlation_plots.html) 
-   4   | [Climate transfer distance](./5_traitPlasticity_TD.Rmd)                                                | [Climate transfer distance](./5_traitPlasticity_TD.html) 
-   5   | [Trait Platicity](./6_traitPlasticity.R)                                                               | [Trait Platicity](./7_traitPlasticity_family_and_pop_blup_plots.html)   
-   6   | [PCA and Plasticity ](./10_PCA_and_Plasticity.Rmd)                                                                      | [PCA and Plasticity ](./10_PCA_and_Plasticity.html)   
-   
-   Still working:  
-   Trait variance partition: [script](./9_trait_variance_partition_Region_plots.Rmd) ; [html](./9_trait_variance_partition_Region_plots.html)  
++--------+------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------+
+| Sl No. | Scripts                                                                                              | Visualizations                                                        |
++========+======================================================================================================+=======================================================================+
+| 1      | [Heritability estimation](./1_heritability.R) ; [Heritability](./2_heritability_values_per_garden.R) | NA                                                                    |
++--------+------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------+
+| 2      | [Genetic variation and GxE](./0_reaction_norms.Rmd)                                                  | [Genetic variation and GxE](./0_reaction_norms.html)                  |
++--------+------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------+
+| 3      | [Genetic correlation model](./3_genetic_correlation_MCMCmodel_final.R)                               | [Genetic Correlation](./4_genetic_correlation_plots.html)             |
++--------+------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------+
+| 4      | [Climate transfer distance](./5_traitPlasticity_TD.Rmd)                                              | [Climate transfer distance](./5_traitPlasticity_TD.html)              |
++--------+------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------+
+| 5      | [Trait Platicity](./6_traitPlasticity.R)                                                             | [Trait Platicity](./7_traitPlasticity_family_and_pop_blup_plots.html) |
++--------+------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------+
+| 6      | [PCA and Plasticity](./10_PCA_and_Plasticity.Rmd)                                                    | [PCA and Plasticity](./10_PCA_and_Plasticity.html)                    |
++--------+------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------+
 
-
-
+Still working:\
+Trait variance partition: [script](./9_trait_variance_partition_Region_plots.Rmd) ; [html](./9_trait_variance_partition_Region_plots.html)
 
 <!-- ```{r pressure, echo=FALSE, fig.cap="Fig. 1. The genealogy of a sample of five alleles, showing the time intervals between coalescent events (Hudson, 1990)", out.width = '60%'} -->
-<!-- knitr::include_graphics("./hudson1990_coalescence.png") -->
-<!-- ```   -->
 
+<!-- knitr::include_graphics("./hudson1990_coalescence.png") -->
+
+<!-- ```   -->

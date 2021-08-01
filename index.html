@@ -226,12 +226,12 @@ div.tocify {
 
 <!-- setup 3col/9col grid for toc_float and main content  -->
 <div class="row">
-<div class="col-sm-12 col-md-4 col-lg-3">
+<div class="col-xs-12 col-sm-4 col-md-3">
 <div id="TOC" class="tocify">
 </div>
 </div>
 
-<div class="toc-content col-sm-12 col-md-8 col-lg-9">
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
 
 
 
@@ -248,8 +248,49 @@ div.tocify {
 
 <p><strong>Affiliation</strong> : Keller Lab; Department of Plant Biology, University of Vermont<br />
 <strong>E-mail contact</strong>: <a href="mailto:anoob.prakash@uvm.edu" class="email">anoob.prakash@uvm.edu</a><br />
-<strong>github repo</strong> : <a href="https://github.com/anoobvinu07/NSF_RedSpruce_CG" class="uri">https://github.com/anoobvinu07/NSF_RedSpruce_CG</a></p>
+<strong>github repo</strong> : <a href="https://github.com/anoobvinu07/NSF_RedSpruce_CG" class="uri">&lt;https://github.com/anoobvinu07/NSF_RedSpruce_CG&gt;</a></p>
+<table style="width:100%;">
+<caption>Data</caption>
+<colgroup>
+<col width="12%" />
+<col width="41%" />
+<col width="46%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>Main Text</th>
+<th>Supplementary</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Trait Data</td>
+<td><p><a href="./data/trait_data/BudBreak_2020.csv">Bud Break (2020)</a></p>
+<p><a href="./data/trait_data/BudSet_2019.csv">Bud Set (2019)</a></p>
+<p><a href="./data/trait_data/BudSet_2020.csv">Bud Set (2020)</a></p>
+<p><a href="./data/trait_data/Growth_2019.csv">Growth (2019)</a></p>
+<p><a href="./data/trait_data/Growth_2020.csv">Growth (2020)</a></p></td>
+<td></td>
+</tr>
+<tr class="even">
+<td>Plasticity Data</td>
+<td><a href="./data/plasticity_data/Plasticity_TD.csv">Complete data</a></td>
+<td><a href="./data/plasticity_data/Plasticity_TD_bbDOY.csv">Bud break (DOY)</a></td>
+</tr>
+<tr class="odd">
+<td>PC scores</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
 <table>
+<colgroup>
+<col width="4%" />
+<col width="55%" />
+<col width="39%" />
+</colgroup>
 <thead>
 <tr class="header">
 <th>Sl No.</th>
@@ -334,6 +375,9 @@ $(document).ready(function () {
 
 <script>
 $(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
 
     // move toc-ignore selectors from section div to header
     $('div.section.toc-ignore')
