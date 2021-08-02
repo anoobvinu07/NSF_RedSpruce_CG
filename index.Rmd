@@ -62,11 +62,11 @@ The data used for this study are provided here. The meta data for the whole stud
 
 : Data used for statistical analysis
 
-## Methods   
+## Methods
 
-Statistical methods used to answer research question 1 are in climate transfer distance (1), climate data and the PCA (first half of PCA and Plasticity (6)), genetic variation and GxE (2) and broad sense heritability (3).   
+Statistical methods used to answer research question 1 are in climate transfer distance (1), climate data and the PCA (first half of PCA and Plasticity (6)), genetic variation and GxE (2) and broad sense heritability (3).
 
-The second research questions looks into the genetic correlation that may be present between the traits (4). Genetic correlation and broad sense heritability was estimated using Bayesian appraoches (MCMCglmm models).  
+The second research questions looks into the genetic correlation that may be present between the traits (4). Genetic correlation and broad sense heritability was estimated using Bayesian appraoches (MCMCglmm models).
 
 Finally, the third research question dwelled into the plasticity present in the traits (5) and whether these plasticities were adaptive or mal-adaptive in nature (second half of PCA and Plasticity (6)).
 
@@ -83,7 +83,7 @@ Finally, the third research question dwelled into the plasticity present in the 
 +--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------+
 | 5      | [Trait Platicity](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/43568608406da6a6abf7ee74a50b7509ea2bacc2/7_traitPlasticity_family_and_pop_blup_plots.Rmd)                                                                | [Trait Platicity](./7_traitPlasticity_family_and_pop_blup_plots.html) |
 +--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------+
-| 6      | [PCA and Plasticity](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/7_traitPlasticity_family_and_pop_blup_plots.Rmd)                                                                                                 | [PCA and Plasticity](./10_PCA_and_Plasticity.html)                    |
+| 6      | [PCA and Plasticity](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/10_PCA_and_Plasticity.Rmd)                                                                                                                       | [PCA and Plasticity](./10_PCA_and_Plasticity.html)                    |
 +--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------+
 
 : Statistical analysis and major findings of the study
