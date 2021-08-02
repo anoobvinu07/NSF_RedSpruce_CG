@@ -26,6 +26,8 @@ suppressPackageStartupMessages({
   require(lmerTest)
   require(tidyverse)
   require(viridis)
+  require(cowplot)
+  
   })
 ```
 
@@ -46,143 +48,263 @@ Plasticity$Region <- plyr::revalue(Plasticity$Region, c("C"="Core","M"="Margin",
 
 ```
 
-## climate data  
+
+
+## Climate data 
+**Provenance climate**  
 ```{r}
-Garden_MAT <- read.csv("./ClimateNA/envGarden_Year_2019Y.csv")
-Garden_MAT
-
-# MAT for 2020
-# source: http://scacis.rcc-acis.org/  
-VT_MAT <- round(((sum(26.1, 24.8, 37.3, 43.4, 57.9, 69.0, 76.8, 71.0, 62.1, 50.1, 43.3, 31.3)/12)-32)*(5/9),1)
-MD_MAT <- round(((sum(31.7, 33.3, 43.3, 44.2, 54.4, 65.6, 73.5, 69.9, 60.5, 52.2, 45.4, 30.7)/12)-32)*(5/9),1)
-NC_MAT <- round(((sum(40.2, 42.1, 51.6, 54.5, 60.7, 72.1, 79.3, 75.8, 66.0, 59.0, 51.7, 37.6)/12)-32)*(5/9),1)
-
-Garden_MAT_2020 <- data.frame(Garden=c("VT_coords","MD_coords","NC_coords"),
-                         MAT=c(VT_MAT,MD_MAT,NC_MAT))
-Garden_MAT_2020
-  
 Provenance_MAT <- read.table("./ClimateNA/Family/PCA_spruceFams.txt", sep="\t", header =  T, stringsAsFactors = T)
 selVars<-c('DD_0','DD18','MAR','PAS','MSP','RH','EXT','CMD','TD','eFFP','current_30arcsec_annualPET') 
+
 ```
 
-## PCA - Family    
+**Garden climate**  
 ```{r}
-# create ID
+Garden_clim <- read.table("./ClimateNA/climNA_gardens_2019-20.txt", header=T)
+Garden_clim
+selVars1 <- c('DD_0','DD18','MAR','PAS','MSP','RH','EXT','CMD','TD','eFFP','PET')
+```
+
+
+## PCA     
+```{r}
+# create ID for provenance (family level) 
 identity <- Provenance_MAT[,(1:2)]
 colnames(exome_meta)[1] <- "Population"
 fam_id <- right_join(identity,exome_meta)
 fam_id$Region <- factor(fam_id$Region,levels=c("C","M","E"))
 fam_id$Region <- plyr::revalue(fam_id$Region, c("C"="Core","M"="Margin","E"="Edge"))
 
+# selected clim of provenance
+data_p2 <-Provenance_MAT[,selVars]
+colnames(data_p2)[11] <- "PET"
+```
 
-# PCA
-data<-Provenance_MAT[,selVars]
-colnames(data)[11] <- "annualPET"
 
-famPCA <- prcomp(data, scale. = TRUE)
+```{r}
+# create ID for garden means
+# garden_identity <- Garden_climateNA1[,1]
 
-fviz_pca_var(famPCA, col.var = "contrib",
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")
-             )
+# create ID for garden
+garden_identity <- Garden_clim[,1:2]
 
-fviz_pca_biplot(famPCA, 
-                col.ind = fam_id$Region, 
-                addEllipses = TRUE, label = "var",
-                col.var = "black", repel = TRUE,
-                legend.title = "Region",title="") + 
-  scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2")) +  
-                labs(x = "PC1 (48.5%)", y = "PC2 (31.8%)") + 
-  theme_bw() + theme(axis.text=element_text(size=14), 
+# selected clim of gardens
+data_p1 <- Garden_clim[,selVars1]
+```
+
+```{r}
+# combined ID  
+head(fam_id)
+head(garden_identity)
+
+fam_id <- fam_id[,c("Population","Family","Region")]
+fam_id$Garden <- NA
+fam_id$Year <- NA
+
+garden_id <- garden_identity
+garden_id$Population <- NA
+garden_id$Family <- NA
+garden_id$Region <- NA
+colnames(garden_id)[1] <- "Garden"
+colnames(garden_id)[2] <- "Year"
+garden_id <- garden_id[,c("Population","Family","Region","Garden","Year")]
+
+id_c <- rbind(garden_id,fam_id)
+
+# combined data
+data_c <- rbind(data_p1,data_p2)
+
+# combined PCA
+data_pca <- prcomp(data_c,scale. = T)
+
+# Extract PC axes for plotting
+PCAvalues <- data.frame(Garden = id_c$Garden, Year = id_c$Year,
+                        Population = id_c$Population, Family = id_c$Family, Region = id_c$Region,
+                        data_pca$x)
+PCAvalues$Year <- as.factor(PCAvalues$Year)
+PCAvalues[!is.na(PCAvalues$Garden),"Group"] <- PCAvalues[!is.na(PCAvalues$Garden),"Garden"]
+
+PCAvalues[!is.na(PCAvalues$Region),"Group"] <- PCAvalues[!is.na(PCAvalues$Region),"Region"]
+PCAvalues$Group <- as.factor(PCAvalues$Group)
+
+# Extract loadings of the variables
+PCAloadings <- data.frame(Variables = rownames(data_pca$rotation), data_pca$rotation)
+
+# write.csv(PCAvalues, row.names = F, "./trait_data/PCA/PCA_score.csv")
+# write.csv(PCAloadings, row.names = F, "./trait_data/PCA/PCA_loadings.csv")
+```
+
+
+
+
+```{r}
+# full plot  
+full_p <- ggplot(PCAvalues[!is.na(PCAvalues$Region),], aes(x = PC1, y = PC2)) +
+  
+
+  # Provenance data
+  geom_point(aes(color=Group),  size=4, pch = 20) +
+  
+  # add loadings 
+  geom_segment(data = PCAloadings, aes(x = 0, y = 0, xend = (PC1*7),
+     yend = (PC2*7)), arrow = arrow(length = unit(1/2, "picas")),
+     color = "black") +
+  
+  annotate("text", x = (PCAloadings$PC1*7.5), y = (PCAloadings$PC2*7.5),
+     label = PCAloadings$Variables, size =5) +
+                scale_color_manual(values = c(
+                                "Core" = "goldenrod2",
+                                "Margin" = "green2",
+                                "Edge" = "steelblue",
+                                "VT" = "#F1BB7B",
+                                "NC"="#5B1A18",
+                                "MD"="#FD6467"),
+                                breaks = c("Core","Margin","Edge","VT","MD","NC"),
+                                labels = c("Core","Margin","Edge","Vermont", "Maryland", "North Carolina")) +
+  # Garden data
+  geom_point(data = PCAvalues[!is.na(PCAvalues$Garden),],
+             aes(x = PC1, y = PC2,
+                 shape=Year, 
+                 color=Group), size=4) +
+  
+  scale_shape_manual(values = c('2019' = 17, '2020' = 16)) +
+  
+  labs(x = "PC1 (48%)", y = "PC2 (30.7%)") +
+  theme_bw() + 
+  theme(legend.position='none',
+        axis.text=element_text(size=14), 
+        axis.title=element_text(size=14,face="bold"),
+        legend.title = element_text(color = "black", size = 14),
+        legend.text = element_text(color = "black", size = 13)) +
+  geom_vline(xintercept = 0, col="darkred", alpha=0.3)+ 
+  geom_hline(yintercept = 0, col="darkred", alpha=0.3) + 
+  stat_ellipse(
+  mapping = aes(PC1, PC2, color = Region),
+  data = PCAvalues[!is.na(PCAvalues$Region),],
+  geom = "path",
+  position = "identity",
+  type = "t",
+  level = 0.95,
+  segments = 51,
+  na.rm = FALSE,
+  show.legend = NA,
+  inherit.aes = TRUE) 
+
+# create legend for garden
+garden_legend_1 <- ggplot(data = PCAvalues[!is.na(PCAvalues$Garden),]) + 
+                 geom_point(aes(x = PC1, y = PC2,
+                                 shape=Year), size=4) +
+                 scale_shape_manual(values = c('2019' = 17, '2020' = 16)) + 
+                 
+                theme(axis.text=element_text(size=14), 
                      axis.title=element_text(size=14,face="bold"),
                      legend.title = element_text(color = "black", size = 14),
                      legend.text = element_text(color = "black", size = 13))
+
+
+garden_legend_2 <- ggplot(data = PCAvalues[!is.na(PCAvalues$Garden),]) + 
+                 geom_point(aes(x = PC1, y = PC2,
+                                 
+                                 color=Group), size=4) +
+                 scale_color_manual(values = c( "VT" = "#F1BB7B",
+                                                "NC"="#5B1A18",
+                                                "MD"="#FD6467"),
+                                                name = "Garden",
+                                                breaks = c("VT","MD","NC"),
+                                                labels = c("Vermont", "Maryland", "North Carolina")) +
+                theme(axis.text=element_text(size=14), 
+                     axis.title=element_text(size=14,face="bold"),
+                     legend.title = element_text(color = "black", size = 14),
+                     legend.text = element_text(color = "black", size = 13))
+
+
+
+# create legend for Region
+region_legend <- ggplot(data = PCAvalues[!is.na(PCAvalues$Region),]) + 
+                 geom_point(aes(x = PC1, y = PC2,
+                                color=Group), size=4) +
+                 scale_shape_manual(values = c('2019' = 17, '2020' = 16)) + 
+                 scale_color_manual(values = c(
+                                "Core" = "goldenrod2",
+                                "Margin" = "green2",
+                                "Edge" = "steelblue"),
+                                name = "Region",
+                                breaks = c("Core","Margin","Edge"),
+                                labels = c("Core","Margin","Edge")) +
+                theme(axis.text=element_text(size=14), 
+                     axis.title=element_text(size=14,face="bold"),
+                     legend.title = element_text(color = "black", size = 14),
+                     legend.text = element_text(color = "black", size = 13))
+
+
+cowplot::plot_grid(
+  full_p
+  , cowplot::plot_grid(
+    get_legend(garden_legend_1),
+    get_legend(garden_legend_2)
+    , get_legend(region_legend)
+    , nrow = 1
+  )
+  , nrow = 2
+  , rel_heights = c(8,2)
+)
 ```
 
 
-```{r eval=F, echo=F}
-# get_pca(famPCA, element = c("var", "ind"))
 
-TAB <- data.frame(PC1 = famPCA$x[,1], PC2 = famPCA$x[,2], Region = fam_id$Region, Family = fam_id$Family, Population = fam_id$Population)
-
-require(ggpubr)
-ggscatter(TAB, x = "PC1", y = "PC2",
-          color = "Region", shape = "Region",
-          palette = c("#00AFBB", "#E7B800", "#FC4E07"),
-          ellipse = TRUE, mean.point = F,
-          star.plot = F, size = 3) +  
-  geom_hline(yintercept=0, linetype="dotted", color = gray(.35), size=0.2) +
-  geom_vline(xintercept=0, linetype="dotted", color = gray(.35), size=0.2) +
-  # facet_wrap(~ "All days and climates together") +
-  labs(x = "PC1 (48.5%)", y = "PC2 (31.8%)") +
-  theme_bw(base_size = 11, base_family = "Times") +
-  theme(panel.background = element_blank(), legend.background = element_blank(), panel.grid = element_blank(), plot.background = element_blank(), legend.text=element_text(size=rel(.8)), strip.text = element_text(size=11))
-
-```
 
 ## Plasticity vs PC1 Models   {.tabset .tabset-fade .tabset-pills}    
 
 
 ### Budset 2019
 ```{r}
-mod_data <- left_join(Plasticity, subset(Provenance_MAT, select=c(Population,Family,PC1_sel,MAT))); mod_data <- rename(mod_data, PC1 = PC1_sel)
+mod_data <- left_join(Plasticity, subset(Provenance_MAT, select=c(Population,Family,PC1_sel,MAT)))
+
+mod_data <- dplyr::rename(mod_data, PC1 = PC1_sel)
+mod_data$Population <- as.factor(mod_data$Population)
 
 # budset 2019
-budset2019_PC1_mod1 <- lm(abs(BudSet2019_Plasticity) ~ PC1 * Region, data=mod_data)
-budset2019_PC1_mod1a <- lm(abs(BudSet2019_Plasticity) ~ PC1, data=mod_data)
-budset2019_PC1_mod1b <- lm(abs(BudSet2019_Plasticity) ~ Region, data=mod_data)
+budset2019_PC1_mod1 <- lmer(abs(BudSet2019_Plasticity) ~ PC1 + (1|Population), data=mod_data)
 
-# LRT
-anova(budset2019_PC1_mod1,budset2019_PC1_mod1a,budset2019_PC1_mod1b)
-summary(budset2019_PC1_mod1);summary(budset2019_PC1_mod1a);summary(budset2019_PC1_mod1b)
+anova(budset2019_PC1_mod1)
+summary(budset2019_PC1_mod1)
 ```
 
 ### Budset 2020
 ```{r}
 # budset 2020
-budset2020_PC1_mod1 <- lm(abs(BudSet2020_Plasticity) ~ PC1 * Region, data=mod_data)
-budset2020_PC1_mod1a <- lm(abs(BudSet2020_Plasticity) ~ PC1, data=mod_data)
-budset2020_PC1_mod1b <- lm(abs(BudSet2020_Plasticity) ~ Region, data=mod_data)
+budset2020_PC1_mod1 <- lmer(abs(BudSet2020_Plasticity) ~ PC1 + (1|Population), data=mod_data)
 
-# LRT
-anova(budset2020_PC1_mod1,budset2020_PC1_mod1a,budset2020_PC1_mod1b)
-summary(budset2020_PC1_mod1);summary(budset2020_PC1_mod1a);summary(budset2020_PC1_mod1b)
+anova(budset2020_PC1_mod1)
+summary(budset2020_PC1_mod1)
 ```
 
 ### Budbreak 2020
 ```{r}
 # budbreak 2020
-budbreak2020_PC1_mod1 <- lm(abs(BudBreak2020_Plasticity) ~ PC1 * Region, data=mod_data)
-budbreak2020_PC1_mod1a <- lm(abs(BudBreak2020_Plasticity) ~ PC1, data=mod_data)
-budbreak2020_PC1_mod1b <- lm(abs(BudBreak2020_Plasticity) ~ Region, data=mod_data)
+budbreak2020_PC1_mod1 <- lmer(abs(BudBreak2020_Plasticity) ~ PC1 + (1|Population), data=mod_data)
 
-# LRT
-anova(budbreak2020_PC1_mod1,budbreak2020_PC1_mod1a,budbreak2020_PC1_mod1b)
-summary(budbreak2020_PC1_mod1);summary(budbreak2020_PC1_mod1a);summary(budbreak2020_PC1_mod1b)
+anova(budbreak2020_PC1_mod1)
+summary(budbreak2020_PC1_mod1)
 ```
 
 ### Growth 2019
 ```{r}
 # growth 2019
-growth2019_PC1_mod1 <- lm(abs(growth2019_Plasticity) ~ PC1 * Region, data=mod_data)
-growth2019_PC1_mod1a <- lm(abs(growth2019_Plasticity) ~ PC1, data=mod_data)
-growth2019_PC1_mod1b <- lm(abs(growth2019_Plasticity) ~ Region, data=mod_data)
+growth2019_PC1_mod1 <- lmer(abs(growth2019_Plasticity) ~ PC1 + (1|Population), data=mod_data)
 
-# LRT
-anova(growth2019_PC1_mod1,growth2019_PC1_mod1a,growth2019_PC1_mod1b)
-summary(growth2019_PC1_mod1);summary(growth2019_PC1_mod1a);summary(growth2019_PC1_mod1b)
+anova(growth2019_PC1_mod1)
+summary(growth2019_PC1_mod1)
 
 ```
 
 ### Growth 2020
 ```{r}
 # growth 2020
-growth2020_PC1_mod1 <- lm(abs(growth2020_Plasticity) ~ PC1 * Region, data=mod_data)
-growth2020_PC1_mod1a <- lm(abs(growth2020_Plasticity) ~ PC1, data=mod_data)
-growth2020_PC1_mod1b <- lm(abs(growth2020_Plasticity) ~ Region, data=mod_data)
+growth2020_PC1_mod1 <- lmer(abs(growth2020_Plasticity) ~ PC1 + (1|Population), data=mod_data)
 
-# LRT
-anova(growth2020_PC1_mod1,growth2020_PC1_mod1a,growth2020_PC1_mod1b)
-summary(growth2020_PC1_mod1);summary(growth2020_PC1_mod1a);summary(growth2020_PC1_mod1b)
+anova(growth2020_PC1_mod1)
+summary(growth2020_PC1_mod1)
 
 ```
 
@@ -197,7 +319,7 @@ Plasticity_pheno <- pheno_plastic %>% tidyr::pivot_longer(cols=c("BudSet2019_Pla
                                                            values_to = "value")
 Plasticity_pheno$TraitType <- ifelse(startsWith(Plasticity_pheno$Traits, "BudSet"), "BudSet", "BudBreak")
 Plasticity_pheno$Year <- ifelse(endsWith(Plasticity_pheno$Traits, "2020_Plasticity"), "2020", "2019")
-Plasticity_pheno <- rename(Plasticity_pheno, PC1 = PC1_sel)
+Plasticity_pheno <- dplyr::rename(Plasticity_pheno, PC1 = PC1_sel)
 
 # Population means  
 Provenance_pop <- read.table("./ClimateNA/Family/PCA_sprucePops.txt", sep="\t", header =  T, stringsAsFactors = T)
@@ -206,75 +328,57 @@ Provenance_pop <- dplyr::rename(Provenance_pop,c(PC1_pop=PC1_sel,MAT_pop=MAT))
 
 # Add population means to the main dataframe
 Plasticity_pheno <- left_join(Plasticity_pheno,Provenance_pop)
-# pheno_pop_means <- Plasticity_pheno %>% group_by(Pop,Traits) %>% summarise(value=mean(value))
-# pheno_pop_means <- as.data.frame(pheno_pop_means)
 
 
-
-# budset
-ggplot(data=Plasticity_pheno[!Plasticity_pheno$TraitType=="BudBreak",],
-       mapping = aes(x=PC1,y=abs(value),col=Traits)) + 
-       geom_smooth(method='lm', formula= y~x) + theme_minimal() + 
-       geom_point(aes(colour = Region), size = 3, alpha = .4) + 
-  scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2","Edge"="steelblue", "BudSet2019_Plasticity"="darkred", "BudSet2020_Plasticity"="limegreen")) +
-  labs(x = "PC1", y = "Plasticity") +
-  theme_bw(base_size = 11, base_family = "Times") +
-  theme(panel.background = element_blank(), legend.background = element_blank(), panel.grid = element_blank(), plot.background = element_blank(), legend.text=element_text(size=rel(.8)), strip.text = element_text(size=11)) + facet_grid(.~Year)
-
-# budbreak 
-ggplot(data=Plasticity_pheno[Plasticity_pheno$TraitType=="BudBreak",],
-       mapping = aes(x=PC1,y=value,col=Traits)) + 
-       geom_smooth(method='lm', formula= y~x) + theme_minimal() + 
-       geom_point(aes(colour = Region), size = 3, alpha = .4) + 
-  scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2","Edge"="steelblue", "BudBreak2020_Plasticity"="limegreen")) +
-  labs(x = "PC1", y = "Plasticity") +
-  theme_bw(base_size = 11, base_family = "Times") +
-  theme(panel.background = element_blank(), legend.background = element_blank(), panel.grid = element_blank(), plot.background = element_blank(), legend.text=element_text(size=rel(.8)), strip.text = element_text(size=11)) 
 
 
 # combined
-  ggplot(data=Plasticity_pheno,
+Phenology <-  ggplot(data=Plasticity_pheno,
+                   mapping = aes(x=PC1,y=abs(value),group=Traits)) + 
+                   geom_smooth(method='lm', formula= y~x, show.legend = FALSE, col="darkred") + theme_minimal() + 
+                   geom_point(aes(colour = Region, shape=TraitType), size = 4, alpha = .4) + 
+              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2","Edge"="steelblue")) +
+              labs(x = "PC1", y = "Absolute Plasticity") +
+              theme_bw(base_size = 11, base_family = "Times") +
+              theme(axis.text=element_text(size=14), 
+                    axis.title=element_text(size=18),
+                    panel.background = element_blank(), 
+                    legend.background = element_blank(), 
+                    panel.grid = element_blank(), 
+                    plot.background = element_blank(), 
+                    legend.text=element_text(size=rel(.8)), 
+                    strip.text = element_text(size=30)) + 
+              facet_grid(.~Year) + 
+                    theme(strip.text.x = element_text(size = 30))
+  
+# create legend 
+test1 <- ggplot(data=Plasticity_pheno,
        mapping = aes(x=PC1,y=abs(value),group=Traits)) + 
        geom_smooth(method='lm', formula= y~x, show.legend = FALSE, col="darkred") + theme_minimal() + 
-       geom_point(aes(colour = Region, shape=TraitType), size = 3, alpha = .4) + 
-  scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2","Edge"="steelblue",
-                                "BudSet2019_Plasticity"="darkred", "BudSet2020_Plasticity"="darkred",
-                                "BudBreak2020_Plasticity"="limegreen")) +
-  labs(x = "PC1", y = "Plasticity") +
-  theme_bw(base_size = 11, base_family = "Times") +
-  theme(axis.text=element_text(size=12), 
-        axis.title=element_text(size=14),
-        panel.background = element_blank(), 
-        legend.background = element_blank(), 
-        panel.grid = element_blank(), 
-        plot.background = element_blank(), 
-        legend.text=element_text(size=rel(.8)), 
-        strip.text = element_text(size=14)) + 
-  facet_grid(.~Year)
+       geom_point(aes(colour = Region, shape=TraitType), size = 3, alpha = 1) + 
+  scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2","Edge"="steelblue")) +
+  labs(x = "PC1", y = "Absolute Plasticity") + 
+  scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2","Edge"="steelblue")) +
+      theme_bw() + theme(axis.text=element_text(size=10), 
+                                                 axis.title=element_text(size=12),
+                                                 legend.position = "right",
+                                                 legend.title=element_text(size=21),
+                                                 legend.text=element_text(size=20),
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) + 
+  guides(color = guide_legend(override.aes = list(size = 8)))
+
+legend_ba <- get_legend(test1 + theme(legend.position="right"))
+
+# final 
+cowplot::plot_grid(Phenology+ theme(legend.position="none"), legend_ba, ncol = 2, rel_widths = c(1,.15))
 ```
 
 
-<!-- ```{r} -->
 
-
-
-
-
-<!-- ggplot(data=Plasticity_pheno[Plasticity_pheno$TraitType=="BudBreak",], -->
-<!--        mapping = aes(x=PC1,y=value,col=Traits)) + -->
-<!--        geom_smooth(method='lm', formula= y~x) + theme_minimal() + -->
-<!--        geom_point(aes(colour = Region, shape = Region), size = 3, alpha = .4) -->
-
-
-
-<!-- ggplot(data=Plasticity_pheno, -->
-<!--        mapping = aes(x=PC1,y=value,col=Traits)) + -->
-<!--        geom_smooth(method='lm', formula= y~x) + theme_minimal() + facet_grid(.~TraitType) -->
-
-
-
-
-<!-- ``` -->
 
 ### Growth  
 ```{r}
@@ -286,30 +390,54 @@ growth_plastic <- growth_plastic %>% tidyr::pivot_longer(cols=c("growth2019_Plas
                                                            values_to = "value")
 
 growth_plastic$Year <- ifelse(endsWith(growth_plastic$Traits, "2020_Plasticity"), "2020", "2019")
-growth_plastic <- rename(growth_plastic, PC1 = PC1_sel)
+growth_plastic <- dplyr::rename(growth_plastic, PC1 = PC1_sel)
 
 # Add population means to the main dataframe
 growth_plastic <- left_join(growth_plastic,Provenance_pop)
 
 
 # growth
-  ggplot(data=growth_plastic,
+Growth <- ggplot(data=growth_plastic,
        mapping = aes(x=PC1,y=abs(value),group=Traits)) + 
        geom_smooth(method='lm', formula= y~x, show.legend = FALSE, col="darkred") + theme_minimal() + 
-       geom_point(aes(colour = Region), size = 3, alpha = .4) + 
+       geom_point(aes(colour = Region), size = 4, alpha = .4) + 
   scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2","Edge"="steelblue",
                                 "growth2019_Plasticity"="darkred", "growth2020_Plasticity"="limegreen")) +
-  labs(x = "PC1", y = "Plasticity") +
+  labs(x = "PC1", y = "Absolute Plasticity") +
   theme_bw(base_size = 11, base_family = "Times") +
-  theme(axis.text=element_text(size=12), 
-        axis.title=element_text(size=14),
+  theme(axis.text=element_text(size=14), 
+        axis.title=element_text(size=18),
         panel.background = element_blank(), 
         legend.background = element_blank(), 
         panel.grid = element_blank(), 
         plot.background = element_blank(), 
         legend.text=element_text(size=rel(.8)), 
-        strip.text = element_text(size=14)) + 
+        strip.text = element_text(size=30)) + 
   facet_grid(.~Year)
+  
+  # create legend 
+test2 <- ggplot(data=growth_plastic,
+       mapping = aes(x=PC1,y=abs(value),group=Traits)) + 
+       geom_smooth(method='lm', formula= y~x, show.legend = FALSE, col="darkred") + theme_minimal() + 
+       geom_point(aes(colour = Region), size = 3, alpha = 1) + 
+  scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2","Edge"="steelblue")) +
+      theme_bw() + theme(axis.text=element_text(size=10), 
+                                                 axis.title=element_text(size=12),
+                                                 legend.position = "right",
+                                                 legend.title=element_text(size=21),
+                                                 legend.text=element_text(size=20),
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) + 
+  guides(color = guide_legend(override.aes = list(size = 8)))
+ 
+legend_bb <- get_legend(test2 + theme(legend.position="right"))
+
+# final 
+cowplot::plot_grid(Growth+ theme(legend.position="none"), legend_bb, ncol = 2, rel_widths = c(1,.09))
+  
 ```
 
 
@@ -319,6 +447,7 @@ growth_plastic <- left_join(growth_plastic,Provenance_pop)
 
 ## Home vs Away Viz {.tabset .tabset-fade .tabset-pills}  
 
+### data  
 ```{r}
 homeAway <- read.csv("./trait_data/Home_vs_Away.csv", header = T, stringsAsFactors = T, sep=","); homeAway <- homeAway[,-1]
 
@@ -331,12 +460,12 @@ homeAway <- left_join(homeAway,subset(Provenance_MAT, select=c(Population,Family
 homeAway <- dplyr::rename(homeAway, c(PC1 = PC1_sel))
 ```
 
-### Budset 2019  
+**Budset 2019**  
 ```{r}
-  ggplot(homeAway[homeAway$Trait=="BudSet2019",],aes(x=Environment,value))+
+A <-   ggplot(homeAway[homeAway$Trait=="BudSet2019",],aes(x=Environment,value))+
     facet_grid(.~Region) + 
   geom_line(aes(y=value,group=Family, color=PC1)) +
-                  xlab("Environment") + ylab("Bud set in 2019 (DOY)") +
+                  xlab("") + ylab("Bud set (DOY)") +
   scale_color_viridis(option = "A", direction = -1) +
   theme_bw() + theme(axis.text=element_text(size=14), 
                      axis.title=element_text(size=14,face="bold"),
@@ -345,12 +474,12 @@ homeAway <- dplyr::rename(homeAway, c(PC1 = PC1_sel))
 ```
 
 
-### Budset 2020  
+**Budset 2020**  
 ```{r}
-  ggplot(homeAway[homeAway$Trait=="BudSet2020",],aes(x=Environment,value))+
+B <-   ggplot(homeAway[homeAway$Trait=="BudSet2020",],aes(x=Environment,value))+
     facet_grid(.~Region) + 
   geom_line(aes(y=value,group=Family, color=PC1)) +
-                  xlab("Environment") + ylab("Bud set in 2020 (DOY)") +
+                  xlab("") + ylab("") +
   scale_color_viridis(option = "A", direction = -1) +
   theme_bw() + theme(axis.text=element_text(size=14), 
                      axis.title=element_text(size=14,face="bold"),
@@ -358,12 +487,12 @@ homeAway <- dplyr::rename(homeAway, c(PC1 = PC1_sel))
                      legend.text = element_text(color = "black", size = 13))
 ```
 
-### Budbreak 2020  
+**Budbreak 2020**  
 ```{r}
-  ggplot(homeAway[homeAway$Trait=="BudBreak2020",],aes(x=Environment,value))+
+C <-   ggplot(homeAway[homeAway$Trait=="BudBreak2020",],aes(x=Environment,value))+
     facet_grid(.~Region) + 
   geom_line(aes(y=value,group=Family, color=PC1)) +
-                  xlab("Environment") + ylab("Bud set in 2020 (GDD)") +
+                  xlab("") + ylab("Bud break (cGDD)") +
   scale_color_viridis(option = "A", direction = -1) +
   theme_bw() + theme(axis.text=element_text(size=14), 
                      axis.title=element_text(size=14,face="bold"),
@@ -371,12 +500,12 @@ homeAway <- dplyr::rename(homeAway, c(PC1 = PC1_sel))
                      legend.text = element_text(color = "black", size = 13))
 ```
 
-### Growth 2019  
+**Growth 2019**   
 ```{r}
-  ggplot(homeAway[homeAway$Trait=="Growth2019",],aes(x=Environment,value))+
+D <-   ggplot(homeAway[homeAway$Trait=="Growth2019",],aes(x=Environment,value))+
     facet_grid(.~Region) + 
   geom_line(aes(y=value,group=Family, color=PC1)) +
-                  xlab("Environment") + ylab("Growth in 2019 (in cm)") +
+                  xlab("2019") + ylab("Growth (cm)") +
   scale_color_viridis(option = "A", direction = -1) +
   theme_bw() + theme(axis.text=element_text(size=14), 
                      axis.title=element_text(size=14,face="bold"),
@@ -384,15 +513,47 @@ homeAway <- dplyr::rename(homeAway, c(PC1 = PC1_sel))
                      legend.text = element_text(color = "black", size = 13))
 ```
 
-### Growth 2020  
+**Growth 2020**  
 ```{r}
-  ggplot(homeAway[homeAway$Trait=="Growth2020",],aes(x=Environment,value))+
+E <-   ggplot(homeAway[homeAway$Trait=="Growth2020",],aes(x=Environment,value))+
     facet_grid(.~Region) + 
   geom_line(aes(y=value,group=Family, color=PC1)) +
-                  xlab("Environment") + ylab("Growth in 2020 (in cm)") +
+                  xlab("2020") + ylab("") +
   scale_color_viridis(option = "A", direction = -1) +
   theme_bw() + theme(axis.text=element_text(size=14), 
                      axis.title=element_text(size=14,face="bold"),
                      legend.title = element_text(color = "black", size = 14),
                      legend.text = element_text(color = "black", size = 13))
 ```
+
+### Visualization  
+
+```{r}
+legend <- get_legend(E + theme(legend.position="right"))
+
+HA_grid <- cowplot::plot_grid( A + theme(legend.position="none"),
+           B + theme(legend.position="none"),
+           legend,
+           C + theme(legend.position="none"),
+           D + theme(legend.position="none"),
+           E + theme(legend.position="none"),
+           align = 'vh',
+           labels = c("A", "B","" ,"C", "D","E"),
+           hjust = -1,
+           nrow = 3
+           )
+
+HA_grid
+```
+
+
+### ANOVA   
+```{r}
+sjPlot::tab_model(budset2019_PC1_mod1, budset2020_PC1_mod1, budbreak2020_PC1_mod1,growth2019_PC1_mod1, growth2020_PC1_mod1,
+                   dv.labels = c("Budset 2019", "Budset 2020", "Budbreak 2020", "Growth 2019", "Growth 2020"),
+                  string.pred = "Coeffcient",
+                  string.ci = "CI (95%)",
+                  string.p = "P-Value",
+                  p.style = "stars")
+```
+

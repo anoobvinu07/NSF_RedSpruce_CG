@@ -27,6 +27,7 @@ require(sjlabelled)
 require(tidyverse)
 require(viridis)
 require(lmerTest)
+require(cowplot)
 })
 ```
 
@@ -301,7 +302,7 @@ tab_model(budset20_mod1)
 ```{r}
 budbreak_2020 <- budbreak_2020%>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
 
-## working model for growth - ****
+## working model for bud break - ****
 budbreak_mod1 <- lmer(data = budbreak_2020, na.action = na.omit,
                cGDD ~ Garden * Region +
                (1|Population) + (1|mBed) +
@@ -352,11 +353,13 @@ plot_model(budbreak_mod1, vline.color = "red", sort.est=TRUE, show.values = T, v
 tab_model(budbreak_mod1)
 ```
 
-# Visaulization  {.tabset .tabset-fade .tabset-pills}    
+# Visualization  {.tabset .tabset-fade .tabset-pills}    
 
-## Growth 2019 rxn    
-- paper**   
-**Family plot**  
+## Growth    
+
+**2019**    
+ 
+***Family plot***  
 ```{r}
 ### Reaction norm for growth
 # remove mbed to get proper reaction norms
@@ -381,18 +384,22 @@ G19 <- ggplot(heightData19,aes(Garden,Growth))+
     facet_grid(.~Region)
     # zero_margin
 
+
+
 # Rxn - family
-G19 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
-                  xlab("Garden site") + ylab("Growth in 2019 (in cm)") +
-  scale_color_viridis(option = "A", direction = -1) +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                     axis.title=element_text(size=14,face="bold"),
-                     legend.title = element_text(color = "black", size = 14),
-                     legend.text = element_text(color = "black", size = 13))
+G19_A <- G19 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                            xlab("") + ylab("Growth in 2019 (cm)") +
+            scale_color_viridis(option = "A", direction = -1) +
+            theme_bw() + theme(axis.text=element_text(size=18), 
+                               axis.title=element_text(size=20,face="bold"),
+                               legend.title = element_text(color = "black", size = 14),
+                               legend.text = element_text(color = "black", size = 13)) + 
+        scale_x_discrete(labels=c("Vermont" = "VT", "Maryland" = "MD", "North_Carolina" = "NC")) + 
+        theme(strip.text.x = element_text(size = 30))
 
 ```
 
-**Region plot**   
+***Region plot***   
 ```{r}
 # Rxn - population
 growth19_pop_rxn <- G19 + geom_line(aes(y=pred,group=Family,colour=Population)) +
@@ -407,27 +414,45 @@ growth19_pop_rxn <- G19 + geom_line(aes(y=pred,group=Family,colour=Population)) 
 
 ## Reaction norm for geo genetic groups/regions
 # growth reaction norm
+G19_B <-      ggplot(heightData19,
+                   aes(x=Garden, y=Growth, color=Region)) +
+              stat_summary(aes(group = Region), fun.y = mean, geom = "path", size = 1.5) +
+              stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1, size=1.5) +
+              stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 5) + 
+              # Lines by species using grouping
+              stat_summary(aes(group = Region), geom = "line", fun = mean) +
+              ylab("") + xlab("") + 
+              theme(legend.position="right") +
+              theme_bw() + theme(axis.text=element_text(size=18), 
+                                   axis.title=element_text(size=20,face="bold"),
+                                   legend.title = element_text(color = "black", size = 14),
+                                   legend.text = element_text(color = "black", size = 13)) +
+              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
+```
+
+```{r}
 ggplot(heightData19,
-       aes(x=Garden, y=Growth, color=Region)) +
-  stat_summary(aes(group = Region), fun.y = mean, geom = "path") +
-  stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1) +
-  stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 2) + 
-  # Lines by species using grouping
-  stat_summary(aes(group = Region), geom = "line", fun = mean) +
-  ylab("Growth in 2019 (in cm)") + theme(legend.position="right") +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                       axis.title=element_text(size=14,face="bold"),
-                       legend.title = element_text(color = "black", size = 14),
-                       legend.text = element_text(color = "black", size = 13)) +
-  scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2"))
+                   aes(x=Garden, y=Growth, color=Region)) +
+              stat_summary(aes(group = Region), fun.y = mean, geom = "path", size = 1.5) +
+              stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1, size=1.5) +
+              stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 5) + 
+              # Lines by species using grouping
+              stat_summary(aes(group = Region), geom = "line", fun = mean) +
+              ylab("") + xlab("") + 
+              theme(legend.position="right") +
+              theme_bw() + theme(axis.text=element_text(size=18), 
+                                   axis.title=element_text(size=20,face="bold"),
+                                   legend.title = element_text(color = "black", size = 14),
+                                   legend.text = element_text(color = "black", size = 13)) +
+              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
 ```
 
 
 
 
-## Growth 2020 rxn    
-- paper**   
-**Family plot**  
+**2020**    
+
+***Family plot***  
 ```{r}
 ### Reaction norm for growth
 # remove mbed to get proper reaction norms
@@ -453,17 +478,19 @@ G20 <- ggplot(heightData20,aes(Garden,Growth))+
     # zero_margin
 
 # Rxn - family
-G20 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
-                  xlab("Garden site") + ylab("Growth in 2020 (in cm)") +
-  scale_color_viridis(option = "A", direction = -1) +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                     axis.title=element_text(size=14,face="bold"),
-                     legend.title = element_text(color = "black", size = 14),
-                     legend.text = element_text(color = "black", size = 13))
+G20_C <-  G20 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                          xlab("") + ylab("Growth in 2020 (cm)") +
+          scale_color_viridis(option = "A", direction = -1) +
+          theme_bw() + theme(axis.text=element_text(size=18), 
+                               axis.title=element_text(size=20,face="bold"),
+                               legend.title = element_text(color = "black", size = 14),
+                               legend.text = element_text(color = "black", size = 13)) + 
+        scale_x_discrete(labels=c("Vermont" = "VT", "Maryland" = "MD", "North_Carolina" = "NC")) + 
+        theme(strip.text.x = element_text(size = 30))
 
 ```
 
-**Region plot**   
+***Region plot***   
 ```{r}
 # Rxn - population
 growth20_pop_rxn <- G20 + geom_line(aes(y=pred,group=Family,colour=Population)) +
@@ -478,60 +505,54 @@ growth20_pop_rxn <- G20 + geom_line(aes(y=pred,group=Family,colour=Population)) 
 
 ## Reaction norm for geo genetic groups/regions
 # growth reaction norm
-ggplot(heightData20,
-       aes(x=Garden, y=Growth, color=Region)) +
-  stat_summary(aes(group = Region), fun.y = mean, geom = "path") +
-  stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1) +
-  stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 2) + 
-  # Lines by species using grouping
-  stat_summary(aes(group = Region), geom = "line", fun = mean) +
-  ylab("Growth in 2020 (in cm)") + theme(legend.position="right") +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                       axis.title=element_text(size=14,face="bold"),
-                       legend.title = element_text(color = "black", size = 14),
-                       legend.text = element_text(color = "black", size = 13)) +
-  scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2"))
+G20_D <-  ggplot(heightData20,
+               aes(x=Garden, y=Growth, color=Region)) +
+          stat_summary(aes(group = Region), fun.y = mean, geom = "path", size = 1.5) +
+              stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1, size=1.5) +
+              stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 5) + 
+              # Lines by species using grouping
+              stat_summary(aes(group = Region), geom = "line", fun = mean) +
+              ylab("") + xlab("") + 
+              theme(legend.position="right") +
+              theme_bw() + theme(axis.text=element_text(size=18), 
+                                   axis.title=element_text(size=20,face="bold"),
+                                   legend.title = element_text(color = "black", size = 14),
+                                   legend.text = element_text(color = "black", size = 13)) +
+              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
 ```
 
 
 
-```{r eval=FALSE, echo=FALSE}
-# ranef(Growth_mod1)
-
-## random intercept and slope models
-Growth_mod2 <- lmer(data = heightData,
-               Growth ~ Garden + Region +
-               # (1|Population) + (1|mBed) +
-               (1 + Garden|Family)) # variance in the random effects
-# as a function of interaction between family and its environment
-
-Growth_mod3 <- lmer(data = heightData,
-               Growth ~ Garden * Region + # interaction between the fixed effects
-               (1 + Garden|Family)) # variance in the random effects
-# as a function of interaction between family and its environment
+**Combined plot for growth**  
+```{r}
 
 
-# growth mod 2 is overfitting even with a lower threshold for singularity detection
-# but the interaction between the garden and region in Growth_mod3 is more acceptable
-isSingular(Growth_mod1, tol = 1e-5)
-isSingular(Growth_mod2, tol = 1e-5)
-isSingular(Growth_mod3, tol = 1e-5)
+legend_PC <- get_legend(G20_C) 
+legend_RE <- get_legend(G20_D)
 
-# confint(Growth_mod1)
-# confint(Growth_mod2)
-# confint(Growth_mod3)
+leg_full <- plot_grid(legend_PC, legend_RE,
+                   nrow = 2)
 
-summary(Growth_mod1)
-summary(Growth_mod2)
-summary(Growth_mod3)
-
-
-
+G_grid <- plot_grid(G19_A + theme(legend.position="none"),
+                         G19_B + theme(legend.position="none"),
+                         G20_C + theme(legend.position="none"),
+                         G20_D + theme(legend.position="none"),
+                         align = 'vh',
+                         labels = c("A", "B","C", "D"),
+                         hjust = -1,
+                         nrow = 2,
+                         rel_widths = c(1,.7))
+# bud set final 
+plot_grid(G_grid, leg_full, ncol = 2, rel_widths = c(1,.05))
+  
 ```
 
-## Budset 2019    
 
-**Family plot**  
+## Phenology     
+
+**Bud set 2019 (DOY)**  
+
+***Family plot***  
 ```{r}
 ### Reaction norm for growth
 # remove mbed to get proper reaction norms
@@ -557,17 +578,19 @@ BS19 <- ggplot(budset_2019_2,aes(Garden,BudSet))+
     # zero_margin
 
 # Rxn - family
-BS19 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
-                  xlab("Garden site") + ylab("Bud set in 2019 (DOY)") +
-  scale_color_viridis(option = "A", direction = -1) +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                     axis.title=element_text(size=14,face="bold"),
-                     legend.title = element_text(color = "black", size = 14),
-                     legend.text = element_text(color = "black", size = 13))
+BS19_A <-     BS19 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                              xlab("") + ylab("Bud set in 2019 (DOY)") +
+              scale_color_viridis(option = "A", direction = -1) +
+              theme_bw() + theme(axis.text=element_text(size=18), 
+                               axis.title=element_text(size=20,face="bold"),
+                               legend.title = element_text(color = "black", size = 14),
+                               legend.text = element_text(color = "black", size = 13)) + 
+        scale_x_discrete(labels=c("Vermont" = "VT", "Maryland" = "MD", "North_Carolina" = "NC")) + 
+        theme(strip.text.x = element_text(size = 30))
 
 ```
 
-**Region plot**  
+***Region plot***  
 ```{r}
 # Rxn - population
 budset19_pop_rxn <- BS19 + geom_line(aes(y=pred,group=Family,colour=Population)) +
@@ -580,23 +603,27 @@ budset19_pop_rxn <- BS19 + geom_line(aes(y=pred,group=Family,colour=Population))
 
 ## Reaction norm for geo genetic groups/regions
 # growth reaction norm
-ggplot(budset_2019_2,
-       aes(x=Garden, y=BudSet, color=Region)) +
-  stat_summary(aes(group = Region), fun.y = mean, geom = "path") +
-  stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1) +
-  stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 2) + 
-  # Lines by species using grouping
-  stat_summary(aes(group = Region), geom = "line", fun = mean) +
-  ylab("Bud set in 2019 (DOY)") + theme(legend.position="right") +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                       axis.title=element_text(size=14,face="bold"),
-                       legend.title = element_text(color = "black", size = 14),
-                       legend.text = element_text(color = "black", size = 13)) +
-  scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2"))
+BS19_B <- ggplot(budset_2019_2,
+             aes(x=Garden, y=BudSet, color=Region)) +
+          stat_summary(aes(group = Region), fun.y = mean, geom = "path", size = 1.5) +
+              stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1, size=1.5) +
+              stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 5) + 
+              # Lines by species using grouping
+              stat_summary(aes(group = Region), geom = "line", fun = mean) +
+              ylab("") + xlab("") + 
+              theme(legend.position="right") +
+              theme_bw() + theme(axis.text=element_text(size=18), 
+                                   axis.title=element_text(size=20,face="bold"),
+                                   legend.title = element_text(color = "black", size = 14),
+                                   legend.text = element_text(color = "black", size = 13)) +
+              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
 ```
 
-## Budset 2020    
-**Family plot**  
+
+**Bud set 2020 (DOY)**    
+
+***Family plot***   
+
 ```{r}
 ### Reaction norm for growth
 # remove mbed to get proper reaction norms
@@ -622,17 +649,19 @@ BS20 <- ggplot(budset_2020_2,aes(Garden,BudSet))+
     # zero_margin
 
 # Rxn - family
-BS20 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
-                  xlab("Garden site") + ylab("Bud set in 2020 (DOY)") +
-  scale_color_viridis(option = "A", direction = -1) +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                     axis.title=element_text(size=14,face="bold"),
-                     legend.title = element_text(color = "black", size = 14),
-                     legend.text = element_text(color = "black", size = 13))
+BS20_C <- BS20 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                                  xlab("") + ylab("Bud set in 2020 (DOY)") +
+                  scale_color_viridis(option = "A", direction = -1) +
+                  theme_bw() + theme(axis.text=element_text(size=18), 
+                               axis.title=element_text(size=20,face="bold"),
+                               legend.title = element_text(color = "black", size = 14),
+                               legend.text = element_text(color = "black", size = 13)) + 
+        scale_x_discrete(labels=c("Vermont" = "VT", "Maryland" = "MD", "North_Carolina" = "NC")) + 
+        theme(strip.text.x = element_text(size = 30))
 
 ```
 
-**Region plot**  
+***Region plot***  
 ```{r}
 # Rxn - population
 budset20_pop_rxn <- BS20 + geom_line(aes(y=pred,group=Family,colour=Population)) +
@@ -645,27 +674,50 @@ budset20_pop_rxn <- BS20 + geom_line(aes(y=pred,group=Family,colour=Population))
 
 ## Reaction norm for geo genetic groups/regions
 # growth reaction norm
-ggplot(budset_2020_2,
-       aes(x=Garden, y=BudSet, color=Region)) +
-  stat_summary(aes(group = Region), fun.y = mean, geom = "path") +
-  stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1) +
-  stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 2) + 
-  # Lines by species using grouping
-  stat_summary(aes(group = Region), geom = "line", fun = mean) +
-  ylab("Bud set in 2020 (DOY)") + theme(legend.position="right") +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                       axis.title=element_text(size=14,face="bold"),
-                       legend.title = element_text(color = "black", size = 14),
-                       legend.text = element_text(color = "black", size = 13)) +
-  scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2"))
+BS20_D <- ggplot(budset_2020_2,
+               aes(x=Garden, y=BudSet, color=Region)) +
+          stat_summary(aes(group = Region), fun.y = mean, geom = "path", size = 1.5) +
+              stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1, size=1.5) +
+              stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 5) + 
+              # Lines by species using grouping
+              stat_summary(aes(group = Region), geom = "line", fun = mean) +
+              ylab("") + xlab("") + 
+              theme(legend.position="right") +
+              theme_bw() + theme(axis.text=element_text(size=18), 
+                                   axis.title=element_text(size=20,face="bold"),
+                                   legend.title = element_text(color = "black", size = 14),
+                                   legend.text = element_text(color = "black", size = 13)) +
+              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
+```
+
+**Combined plot for bud set**  
+```{r}
+
+
+legend_PC <- get_legend(BS20_C) 
+legend_RE <- get_legend(BS20_D)
+
+leg_full <- plot_grid(legend_PC, legend_RE,
+                   nrow = 2)
+
+BS_grid <- plot_grid(BS19_A + theme(legend.position="none"),
+                         BS19_B + theme(legend.position="none"),
+                         BS20_C + theme(legend.position="none"),
+                         BS20_D + theme(legend.position="none"),
+                         align = 'vh',
+                         labels = c("A", "B","C", "D"),
+                         hjust = -1,
+                         nrow = 2,
+                         rel_widths = c(1,.7))
+# bud set final 
+plot_grid(BS_grid, leg_full, ncol = 2, rel_widths = c(1,.05))
+  
 ```
 
 
+**Bud Break 2020 (cGDD)**    
 
-
-## Bud Break 2020    
-
-**Family plot**   
+***Family plot***   
 ```{r}
 ### Reaction norm for growth
 # remove mbed to get proper reaction norms
@@ -690,17 +742,19 @@ BB20 <- ggplot(budbreak,aes(Garden,cGDD))+
     # zero_margin
 
 # Rxn - family
-BB20 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
-                  xlab("Garden site") + ylab("Bud break in 2020 (cGDD)") +
-  scale_color_viridis(option = "A", direction = -1) +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                     axis.title=element_text(size=14,face="bold"),
-                     legend.title = element_text(color = "black", size = 14),
-                     legend.text = element_text(color = "black", size = 13))
+BB20_A <- BB20 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                                  xlab("") + ylab("Bud break in 2020 (cGDD)") +
+                  scale_color_viridis(option = "A", direction = -1) +
+                  theme_bw() + theme(axis.text=element_text(size=18), 
+                               axis.title=element_text(size=20,face="bold"),
+                               legend.title = element_text(color = "black", size = 14),
+                               legend.text = element_text(color = "black", size = 13)) + 
+        scale_x_discrete(labels=c("Vermont" = "VT", "Maryland" = "MD", "North_Carolina" = "NC")) + 
+        theme(strip.text.x = element_text(size = 30))
 
 ```
 
-**Region plot**   
+***Region plot***   
 ```{r}
 # Rxn - population
 budbreak_pop_rxn <- BB20 + geom_line(aes(y=pred,group=Family,colour=Population)) +
@@ -712,239 +766,130 @@ budbreak_pop_rxn <- BB20 + geom_line(aes(y=pred,group=Family,colour=Population))
 
 
 ## Reaction norm for geo genetic groups/regions
-ggplot(budbreak,
-       aes(x=Garden, y=cGDD, color=Region)) +
-  stat_summary(aes(group = Region), fun.y = mean, geom = "path") +
-  stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1) +
-  stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 2) + 
-  # Lines by species using grouping
-  stat_summary(aes(group = Region), geom = "line", fun = mean) +
-  ylab("Bud break in 2020 (cGDD)") + theme(legend.position="right") +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                       axis.title=element_text(size=14,face="bold"),
-                       legend.title = element_text(color = "black", size = 14),
-                       legend.text = element_text(color = "black", size = 13)) +
-  scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2"))
+BB20_B <- ggplot(budbreak,
+               aes(x=Garden, y=cGDD, color=Region)) +
+          stat_summary(aes(group = Region), fun.y = mean, geom = "path", size = 1.5) +
+              stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1, size=1.5) +
+              stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 5) + 
+              # Lines by species using grouping
+              stat_summary(aes(group = Region), geom = "line", fun = mean) +
+              ylab("") + xlab("") + 
+              theme(legend.position="right") +
+              theme_bw() + theme(axis.text=element_text(size=18), 
+                                   axis.title=element_text(size=20,face="bold"),
+                                   legend.title = element_text(color = "black", size = 14),
+                                   legend.text = element_text(color = "black", size = 13)) +
+              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
 ```
 
-
-
-
-
-
-
-# Bud Break 2020  - cCDD  {.tabset .tabset-fade .tabset-pills}  
-## Models  
+**Combined plot for bud break - cGDD**  
 ```{r}
-budbreak_cCDD <- read.csv("C:\\Dropbox\\UVM\\Research\\Code/CommonGardenTraits/2020/BudBreak_2020_cCDD.csv", header=T,
-                        stringsAsFactors = T)
-# reordering factors
-budbreak_cCDD$Region <- factor(budbreak_cCDD$Region,
-                       levels = c("Core", "Margin", "Edge"))
-budbreak_cCDD$Garden <- factor(budbreak_cCDD$Garden,
-                       levels = c("Vermont", "Maryland", "North_Carolina"))
-budbreak_cCDD <- budbreak_cCDD%>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
+legend_PC <- get_legend(BB20_A) 
+legend_RE <- get_legend(BB20_B)
 
+leg_full <- plot_grid(legend_PC, legend_RE,
+                   nrow = 2)
 
-
-
-
-## working model for cCDD - ****
-budbreak_cCDD_mod1 <- lmer(data = budbreak_cCDD,
-               cCDD ~ Garden * Region +
-               (1|Population) + (1|mBed) +
-               (Garden|Family), na.action = na.omit) # G x E
-
-budbreak_cCDD_mod1a <- lmer(data = budbreak_cCDD,
-               cCDD ~ Garden * Region +
-               (1|Population) + (1|mBed) + (1|Family), na.action = na.omit)
-
-budbreak_cCDD_mod1b <- lmer(data = budbreak_cCDD,
-               cCDD ~ Garden * Region +
-               (1|Population) + (1|mBed), na.action = na.omit)
-
-# model 1 anova 
-anova(budbreak_cCDD_mod1)
-
-# impact of GxE
-anova(budbreak_cCDD_mod1, budbreak_cCDD_mod1a) 
-
-# effect of genotype
-anova(budbreak_cCDD_mod1a, budbreak_cCDD_mod1b)
-
-# model 1 vs 3
-anova(budbreak_cCDD_mod1, budbreak_cCDD_mod1b)
-
-# the effect of genotype has higher magnitude of significance compared to the 
-# effect of GxE
-
-# GxE is of higher magnitude effect when not accounting for family
-anova(budbreak_cCDD_mod1, budbreak_cCDD_mod1b)
-
-# LRT 
-anova(budbreak_cCDD_mod1,budbreak_cCDD_mod1a,budbreak_cCDD_mod1b)
-
-# AIC
-AIC(budbreak_cCDD_mod1,budbreak_cCDD_mod1a,budbreak_cCDD_mod1b)
-
-
-# effect size estimates for budbreak_cCDD trait
-plot_model(budbreak_cCDD_mod1, vline.color = "red", sort.est=TRUE, show.values = T, value.offset = .3) + 
-  theme_minimal() +
-  theme(axis.text=element_text(size=12),
-        axis.title=element_text(size=12,face="bold"),
-        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+BB_grid <- plot_grid(BB20_A + theme(legend.position="none"),
+                         BB20_B + theme(legend.position="none"),
+                         align = 'vh',
+                         labels = c("A", "B"),
+                         hjust = -1,
+                         nrow = 1,
+                         rel_widths = c(1,.7))
+# bud set final 
+plot_grid(BB_grid, leg_full, ncol = 2, rel_widths = c(1,.08))
+  
 ```
 
-## Reaction norm - part 1  
-```{r}
-# reaction norms for interactions
-sjPlot::plot_model(budbreak_cCDD_mod1, type = "int")
-sjPlot::plot_model(budbreak_cCDD_mod1, type = "re")
+## Supplementary  
 
-##### reaction norms based on the model - Family
-budbreak_cCDD3 <- budbreak_cCDD[!is.na(budbreak_cCDD$cCDD),]
+**Bud break 2020 (DOY)**  
 
-# budbreak_cCDD2$pred <- predict(budbreak_cCDD_mod1, re.form=NULL) # all random effects are included
-
-budbreak_cCDD3$pred <- predict(budbreak_cCDD_mod1,re.form=NA)  ## population level
-budbreak_cCDD3$pred1 <- predict(budbreak_cCDD_mod1) ## individual level
-
-g0 <- ggplot(budbreak_cCDD3,aes(Garden,cCDD, label=Family))+
-    geom_point()+
-    geom_line(aes(group=Family)) +
-    facet_grid(.~Region)
-    # zero_margin
-g0 +   geom_line(colour="blue",aes(y=pred1,group=Family)) +
-    geom_line(colour="red",aes(y=pred,group=Family)) 
-
-##### reaction norms based on the model - Population
-
-g0 <- ggplot(budbreak_cCDD3,aes(Garden,cCDD))+
-    geom_point()+
-    geom_line(aes(group=Population)) +
-    facet_grid(.~Region)
-    # zero_margin
-g0 +   geom_line(colour="blue",aes(y=pred1,group=Population)) +
-    geom_line(colour="red",aes(y=pred,group=Population))
-```
-
-## Reaction norm - Part 2  
-```{r}
-# reaction norms based on the model - Family
-budbreak_cCDD3 <- budbreak_cCDD[!is.na(budbreak_cCDD$cCDD),]
-
-# budbreak_cCDD2$pred <- predict(budbreak_cCDD_mod1, re.form=NULL) # all random effects are included
-
-budbreak_cCDD3$pred <- predict(budbreak_cCDD_mod1,re.form=NA)  ## population level/ no random effects included
-budbreak_cCDD3$pred1 <- predict(budbreak_cCDD_mod1) ## individual level
-
-G0 <- ggplot(budbreak_cCDD3,aes(Garden,cCDD))+
-    # geom_point()+
-    # geom_line(aes(group=Family)) +
-    facet_grid(.~Region) #+ zero_margin
-
-
-G0 + geom_line(colour="red",aes(y=pred,group=Family))  +
-                  xlab("Garden site") + ylab("Vertical height growth (in cm)") +
-  theme_minimal() +
-  theme(axis.text=element_text(size=12),
-        axis.title=element_text(size=12,face="bold"),
-        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
-```
-
-
-**budbreak_cCDD 2020 rxn - paper** 
+***Family plot***   
 ```{r}
 ### Reaction norm for growth
 # remove mbed to get proper reaction norms
 # the presence of mbeds complicates the reaction norm otherwise
-budbreak_cCDD_mod_nMb <- lmer(data = budbreak_cCDD,
-               cCDD ~ Garden * Region +
+budbreak_DOY_mod_nMb <- lmer(data = budbreak_2020,
+               BudBreak ~ Garden * Region +
                (1|Population) + 
-               (Garden|Family), na.action = na.omit)
+               (Garden|Family))
 
-budbreak_cCDD6 <- budbreak_cCDD3
-budbreak_cCDD6$pred <- predict(budbreak_cCDD_mod_nMb)
+budbreak <- budbreak_2020[!is.na(budbreak_2020$BudBreak),]
+budbreak$pred <- predict(budbreak_DOY_mod_nMb)
 
 # merge climateNA data
-budbreak_cCDD6 <- merge(x=budbreak_cCDD6,
+budbreak <- merge(x=budbreak,
                    y=Population_climateNA[,c("Population","PC1","MAT")],
                    by="Population")
 
 # faceting by regions
 # the geographic region labels are based on the genotypic differences as well
-G0 <- ggplot(budbreak_cCDD6,aes(Garden,cCDD))+
+BB20_DOY <- ggplot(budbreak,aes(Garden,BudBreak))+
     facet_grid(.~Region)
     # zero_margin
 
 # Rxn - family
-G0 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
-                  xlab("Garden site") + ylab("Bud break in 2020 (cCDD)") +
-  scale_color_viridis(option = "A", direction = -1) +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                     axis.title=element_text(size=14,face="bold"),
-                     legend.title = element_text(color = "black", size = 14),
-                     legend.text = element_text(color = "black", size = 13))
+BB20_DOY_A <- BB20_DOY + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                                xlab("") + ylab("Bud break in 2020 (DOY)") +
+                scale_color_viridis(option = "A", direction = -1) +
+                theme_bw() + theme(axis.text=element_text(size=18), 
+                               axis.title=element_text(size=20,face="bold"),
+                               legend.title = element_text(color = "black", size = 14),
+                               legend.text = element_text(color = "black", size = 13)) + 
+        scale_x_discrete(labels=c("Vermont" = "VT", "Maryland" = "MD", "North_Carolina" = "NC")) + 
+        theme(strip.text.x = element_text(size = 30))
 
 ```
 
-
+***Region plot***   
 ```{r}
 # Rxn - population
-budbreak_cCDD_pop_rxn <- G0 + geom_line(aes(y=pred,group=Family,colour=Population)) +
-                  xlab("Garden site") + ylab("cCDD") +
+budbreak_DOY_pop_rxn <- BB20_DOY + geom_line(aes(y=pred,group=Family,colour=Population)) +
+                  xlab("Garden site") + ylab("DOY") +
   theme_minimal() +
   theme(axis.text=element_text(size=12),
         axis.title=element_text(size=12,face="bold"),
         strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
 
-plotly::ggplotly(budbreak_cCDD_pop_rxn)
-
-budbreak_cCDD_pop_rxn
 
 ## Reaction norm for geo genetic groups/regions
-# growth reaction norm
-ggplot(budbreak_cCDD3, aes(x = Garden, y = cCDD, color = Region)) +
-  stat_summary(aes(group = Region), fun = mean, geom = "path") +
-  stat_summary(aes(color = Region), fun.data = mean_cl_boot, 
-               geom = "errorbar", width = 0.1) +
-  stat_summary(aes(color = Region), fun = mean, geom = "point", size = 4) +
-  # geom_point(aes(color = Region), size = 2) +
-  theme_minimal() + ylab("cCDD") + 
-  theme(text = element_text(size=12),
-        axis.text.x = element_text(angle=0))
-
-
-
-
-
-
+BB20_DOY_B <- ggplot(budbreak,
+                           aes(x=Garden, y=BudBreak, color=Region)) +
+                      stat_summary(aes(group = Region), fun.y = mean, geom = "path", size = 1.5) +
+              stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1, size=1.5) +
+              stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 5) + 
+              # Lines by species using grouping
+              stat_summary(aes(group = Region), geom = "line", fun = mean) +
+              ylab("") + xlab("") + 
+              theme(legend.position="right") +
+              theme_bw() + theme(axis.text=element_text(size=18), 
+                                   axis.title=element_text(size=20,face="bold"),
+                                   legend.title = element_text(color = "black", size = 14),
+                                   legend.text = element_text(color = "black", size = 13)) +
+              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
 ```
 
-## Reaction norm - Part 3  
+**Combined plot - Supplementary figure**  
 ```{r}
-ggplot(budbreak_cCDD3,
-       aes(x=Garden, y=cCDD, color=Region)) +
-  stat_summary(aes(group = Region), fun.y = mean, geom = "path") +
-  stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1) +
-  stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 2) + 
-  # Lines by species using grouping
-  stat_summary(aes(group = Region), geom = "line", fun = mean) +
-  ylab("Bud break in 2020 (cCDD)") + theme(legend.position="right") +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                       axis.title=element_text(size=14,face="bold"),
-                       legend.title = element_text(color = "black", size = 14),
-                       legend.text = element_text(color = "black", size = 13)) +
-  scale_color_manual(values = c("Core" = "goldenrod2","Edge"="steelblue","Margin"="green2"))
-```
 
 
+legend_PC <- get_legend(BB20_DOY_A) 
+legend_RE <- get_legend(BB20_DOY_B)
 
-```{r}
-# diagnostic tests for the model
-sjPlot::plot_model(budbreak_cCDD_mod1, type = "diag")
+leg_full <- plot_grid(legend_PC, legend_RE,
+                   nrow = 2)
 
-tab_model(budbreak_cCDD_mod1)
+BB_DOY_grid <- plot_grid(BB20_DOY_A + theme(legend.position="none"),
+                         BB20_DOY_B + theme(legend.position="none"),
+                         align = 'vh',
+                         labels = c("A", "B"),
+                         hjust = -1,
+                         nrow = 1,
+                         rel_widths = c(1,.7))
+# bud set DOY final 
+plot_grid(BB_DOY_grid, leg_full, ncol = 2, rel_widths = c(1,.08))
+  
 ```
 

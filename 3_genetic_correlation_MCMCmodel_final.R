@@ -1,16 +1,16 @@
-# genetic correlation between traits
+# genetic correlation between traits  
 
-# setwd("Z:/Anoob/MCMCglmm")
+# setwd("Z:/Anoob/MCMCglmm")  
 
-## notes
-# gw - growth
-# bb - budbreak
-# bs - budset
-# B - lmer family blups (means)
-# P - plasticity value for the trait
+## notes  
+# gw - growth  
+# bb - budbreak  
+# bs - budset  
+# B - lmer family blups (means)  
+# P - plasticity value for the trait  
 
 # notes from: https://stat.ethz.ch/pipermail/r-sig-mixed-models/2017q1/025532.html  
-# multiresponse mcmc models, page 92: https://cran.r-project.org/web/packages/MCMCglmm/vignettes/CourseNotes.pdf 
+# multiresponse mcmc models, page 92: https://cran.r-project.org/web/packages/MCMCglmm/vignettes/CourseNotes.pdf  
 
 # packages
 require(MCMCglmm)
