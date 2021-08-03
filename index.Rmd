@@ -32,7 +32,7 @@ This page provides information on the study conducted on red spruce across its r
 
 ## Map  
 
-Map of the geographic locations of 65 ***Picea rubens*** populations (circles) sampled for this study. Colors indicate the assignment to geo-genetic regions based on genomic analyses. The three common garden sites at Vermont, Maryland and North Carolina are indicated as grey squares along with the elevation (m.a.s.l.) at which they are located. The red shaded area on the map indicates the known range extent of red spruce. 
+Map of the geographic locations of 65 <i>Picea rubens</i> populations (circles) sampled for this study. Colors indicate the assignment to geo-genetic regions based on genomic analyses. The three common garden sites at Vermont, Maryland and North Carolina are indicated as grey squares along with the elevation (m.a.s.l.) at which they are located. The red shaded area on the map indicates the known range extent of red spruce. 
 
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE, echo=F}
 # packages  
