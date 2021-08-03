@@ -30,9 +30,109 @@ knitr::opts_chunk$set(echo = TRUE)
 
 This page provides information on the study conducted on red spruce across its range in order to understand the genetic variation and plasticity present in the species that might facilitate its adaptation to climate change.
 
-## Map
+## Map  
 
-![Map of the geographic locations of 65 Picea rubens populations (circles) sampled for this study. Colors indicate the assignment to geo-genetic regions based on genomic analyses. The three common garden sites at Vermont, Maryland and North Carolina are indicated as grey squares along with the elevation (m.a.s.l.) at which they are located. The orange-red shaded area on the map indicates the known range extent of red spruce](./Figure1_Map2.png)
+Map of the geographic locations of 65 ***Picea rubens*** populations (circles) sampled for this study. Colors indicate the assignment to geo-genetic regions based on genomic analyses. The three common garden sites at Vermont, Maryland and North Carolina are indicated as grey squares along with the elevation (m.a.s.l.) at which they are located. The red shaded area on the map indicates the known range extent of red spruce. 
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE, echo=F}
+# packages  
+suppressPackageStartupMessages({
+  require(sp)
+  require(leaflet)
+})
+
+# data
+meta <- read.csv("C:\\Dropbox\\UVM\\Research\\Exome\\RS_Exome_metadata.txt",
+                 header=T,
+                 sep="\t")
+Fam <- meta[,c("Pop","Family","Region","Latitude","Longitude","Elevation")]
+Fam$Longitude <- Fam$Longitude * -1
+Fam$Region <- plyr::revalue(Fam$Region,
+                               c("C" = "Core", "M" = "Margin", "E" = "Edge"))
+
+Fam$Region <- factor(Fam$Region,levels = c("Core", "Margin", "Edge"))
+
+Garden <- data.frame("Garden"   = c("Vermont","Maryland","North_Carolina"),
+                     "Latitude" = c(44.4759,39.642483,35.504163),
+                     "Longitude"= c(-73.2121,-78.939213,-82.5995),
+                     "Elevation"= c(59,588,665))
+
+data <- Fam[,c(3:6)]
+g2 <- Garden
+names(g2)[1] <- "Region"
+data <- rbind(data,g2)
+
+
+## range cover of red spruce
+
+range <- raster::shapefile("Z:\\datashare\\Spruce\\SpatialData\\rangemaps\\spruce\\picerube\\picerube.shp")
+
+# sp::proj4string(range) # describes data’s current coordinate reference system
+
+# to change to correct projection:
+range <- spTransform(range,
+                     CRS("+proj=longlat +datum=WGS84"))
+
+
+
+# leaflet  
+
+map <- leaflet(data = range)
+
+
+pal <- colorFactor(c("goldenrod2","steelblue","green2"), domain = c("Core", "Margin","Edge"))
+
+
+map %>%
+  # setView(lng = -70 ,lat= 43, zoom = 5.3) %>%
+  setMaxBounds(lng1 = -76.5, lat1 = 41.5, 
+               lng2 = -74,
+               lat2 = 41 ) %>% 
+  addProviderTiles("OpenTopoMap") %>% 
+  addPolygons(
+    stroke = FALSE,
+    fillOpacity = 0.7,
+    smoothFactor = 0.1,
+    color="red"
+    ) %>% 
+  
+  addCircleMarkers(
+    data = Fam, 
+    lng=~Longitude,
+    lat=~Latitude,
+    color = "black",
+    radius=5,
+    stroke=T,
+    weight = 0.8,
+    fillColor =~pal(Region),
+    fillOpacity = 0.9,
+    popup = paste0("<strong>Population: </strong>", Fam$Pop, "</br>",
+                   "<strong>Family: </strong>", Fam$Family)
+) %>% 
+  addCircleMarkers(
+    data = Garden, 
+    lng=~Longitude,
+    lat=~Latitude,
+    color = "black",
+    radius=8,
+    stroke=T,
+    weight = 0.8,
+    fillColor ="grey50",
+    fillOpacity = 0.9,
+    popup = paste0("<strong>Garden site: </strong>", Garden$Garden, "</br>",
+                   "<strong>Elevation: </strong>", Garden$Elevation)
+) %>% 
+  addPopups(data = Garden, 
+    lng=~Longitude,
+    lat=~Latitude, Garden$Garden,
+    options = popupOptions(closeButton = T)
+  ) %>% 
+  addLegend('bottomright', pal = pal, values = Fam$Region,
+            title = 'Region',
+            opacity = 1)
+
+```
+ 
 
 ## Data
 
