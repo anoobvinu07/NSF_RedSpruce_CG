@@ -15,7 +15,25 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+# Methods  
 
+**Adaptive plasticity model**  
+- Height was selected as proxy for fitness  
+- Absolute plasticity or Plasticity of the trait correlated with fitness to check whether the plasticity is adaptive, maladaptive or neutral  
+
+```
+Absolute_plasticity or Plasticity <- Height_Growth ~ Abs_P + Region + Abs_P * Region
+```
+![Estimating the adaptive or maladaptive nature of trait plasticity](./adaptive_plasticity.png)
+
+## notes  
+gw - growth  
+bb - budbreak  
+bs - budset  
+B - lmer family blups (means)  
+P - plasticity value for the trait 
+
+## packages
 ```{r}
 suppressPackageStartupMessages({
   require(ggplot2)
@@ -42,13 +60,24 @@ heightGrowth_2019 <- read.csv("./trait_data/Growth_2019.csv")
 heightGrowth_2020 <- read.csv("./trait_data/Growth_2020.csv")
 exome_meta <- read.table("./Exome/RS_Exome_metadata.txt", header = T, sep="\t")
 
-Plasticity <- read.csv("./trait_data/Plasticity_TD.csv", stringsAsFactors = T); Plasticity <- Plasticity[,-1]; 
-colnames(Plasticity)[2] <- "Population";Plasticity$Region <- factor(Plasticity$Region, levels=c("C","M","E"));
-Plasticity$Region <- plyr::revalue(Plasticity$Region, c("C"="Core","M"="Margin","E"="Edge"))
+Plasticity <- read.csv("./trait_data/Plasticity.csv", stringsAsFactors = T); Plasticity <- Plasticity[,-1] 
+Plasticity$Region <- factor(Plasticity$Region, levels=c("Core","Margin","Edge"))
 
+# Region palette
+reg_palette <- c("goldenrod2","green2","steelblue")
 ```
 
+```{r}
+# exome data
+exome_meta <- read.table("./Exome/RS_Exome_metadata.txt", sep="\t", header = T)
 
+# climateNA
+Population_climateNA <- read.csv("./ClimateNA/Family/PCA_sprucePops.txt", header=T, sep="\t")
+colnames(Population_climateNA)[colnames(Population_climateNA)=="PC1_sel"] <- "PC1"
+
+Family_climateNA <- read.csv("./ClimateNA/Family/PCA_spruceFams.txt", header=T, sep="\t")
+colnames(Family_climateNA)[colnames(Family_climateNA)=="PC1_sel"] <- "PC1"
+```
 
 ## Climate data 
 **Provenance climate**  
@@ -65,8 +94,7 @@ Garden_clim
 selVars1 <- c('DD_0','DD18','MAR','PAS','MSP','RH','EXT','CMD','TD','eFFP','PET')
 ```
 
-
-## PCA     
+# PCA     
 ```{r}
 # create ID for provenance (family level) 
 identity <- Provenance_MAT[,(1:2)]
@@ -251,20 +279,15 @@ cowplot::plot_grid(
 ```
 
 
-
+# Plasticity vs PC1
 
 ## Plasticity vs PC1 Models   {.tabset .tabset-fade .tabset-pills}    
 
 
 ### Budset 2019
 ```{r}
-mod_data <- left_join(Plasticity, subset(Provenance_MAT, select=c(Population,Family,PC1_sel,MAT)))
-
-mod_data <- dplyr::rename(mod_data, PC1 = PC1_sel)
-mod_data$Population <- as.factor(mod_data$Population)
-
 # budset 2019
-budset2019_PC1_mod1 <- lmer(abs(BudSet2019_Plasticity) ~ PC1 + (1|Population), data=mod_data)
+budset2019_PC1_mod1 <- lmer(BudSet_2019 ~ PC1 + (1|Population), data=Plasticity[!is.na(Plasticity$BudSet_2019),])
 
 anova(budset2019_PC1_mod1)
 summary(budset2019_PC1_mod1)
@@ -273,7 +296,7 @@ summary(budset2019_PC1_mod1)
 ### Budset 2020
 ```{r}
 # budset 2020
-budset2020_PC1_mod1 <- lmer(abs(BudSet2020_Plasticity) ~ PC1 + (1|Population), data=mod_data)
+budset2020_PC1_mod1 <- lmer(BudSet_2020 ~ PC1 + (1|Population), data=Plasticity[!is.na(Plasticity$BudSet_2020),])
 
 anova(budset2020_PC1_mod1)
 summary(budset2020_PC1_mod1)
@@ -282,7 +305,7 @@ summary(budset2020_PC1_mod1)
 ### Budbreak 2020
 ```{r}
 # budbreak 2020
-budbreak2020_PC1_mod1 <- lmer(abs(BudBreak2020_Plasticity) ~ PC1 + (1|Population), data=mod_data)
+budbreak2020_PC1_mod1 <- lmer(BudBreak_cGDD ~ PC1 + (1|Population), data=Plasticity[!is.na(Plasticity$BudBreak_cGDD),])
 
 anova(budbreak2020_PC1_mod1)
 summary(budbreak2020_PC1_mod1)
@@ -291,7 +314,7 @@ summary(budbreak2020_PC1_mod1)
 ### Growth 2019
 ```{r}
 # growth 2019
-growth2019_PC1_mod1 <- lmer(abs(growth2019_Plasticity) ~ PC1 + (1|Population), data=mod_data)
+growth2019_PC1_mod1 <- lmer(Growth_2019 ~ PC1 + (1|Population), data=Plasticity[!is.na(Plasticity$Growth_2019),])
 
 anova(growth2019_PC1_mod1)
 summary(growth2019_PC1_mod1)
@@ -301,7 +324,7 @@ summary(growth2019_PC1_mod1)
 ### Growth 2020
 ```{r}
 # growth 2020
-growth2020_PC1_mod1 <- lmer(abs(growth2020_Plasticity) ~ PC1 + (1|Population), data=mod_data)
+growth2020_PC1_mod1 <- lmer(Growth_2020 ~ PC1 + (1|Population), data=Plasticity[!is.na(Plasticity$Growth_2020),])
 
 anova(growth2020_PC1_mod1)
 summary(growth2020_PC1_mod1)
@@ -311,15 +334,17 @@ summary(growth2020_PC1_mod1)
 ## Plasticity vs PC1 Viz {.tabset .tabset-fade .tabset-pills}  
 ### Phenology  
 ```{r}
-pheno_plastic <- subset(Plasticity, select=-c(growth2019_Plasticity,growth2020_Plasticity));
-pheno_plastic <- left_join(pheno_plastic,subset(Provenance_MAT, select=c(Population,Family,PC1_sel,MAT)))
+pheno_plastic <- subset(Plasticity, select=-c(BudBreak_DOY,Growth_2019,Growth_2020)) # growth_2019,growth_2020
+colnames(pheno_plastic)[colnames(pheno_plastic)=="BudBreak_cGDD"] <- "BudBreak_2020"
 
-Plasticity_pheno <- pheno_plastic %>% tidyr::pivot_longer(cols=c("BudSet2019_Plasticity":"BudBreak2020_Plasticity"),
+
+
+Plasticity_pheno <- pheno_plastic %>% tidyr::pivot_longer(cols=c("BudBreak_2020":"BudSet_2020"),
                                                            names_to = "Traits",
                                                            values_to = "value")
 Plasticity_pheno$TraitType <- ifelse(startsWith(Plasticity_pheno$Traits, "BudSet"), "BudSet", "BudBreak")
-Plasticity_pheno$Year <- ifelse(endsWith(Plasticity_pheno$Traits, "2020_Plasticity"), "2020", "2019")
-Plasticity_pheno <- dplyr::rename(Plasticity_pheno, PC1 = PC1_sel)
+Plasticity_pheno$Year <- ifelse(endsWith(Plasticity_pheno$Traits, "2020"), "2020", "2019")
+# Plasticity_pheno <- dplyr::rename(Plasticity_pheno, PC1 = PC1_sel)
 
 # Population means  
 Provenance_pop <- read.table("./ClimateNA/Family/PCA_sprucePops.txt", sep="\t", header =  T, stringsAsFactors = T)
@@ -338,7 +363,7 @@ Phenology <-  ggplot(data=Plasticity_pheno,
                    geom_smooth(method='lm', formula= y~x, show.legend = FALSE, col="darkred") + theme_minimal() + 
                    geom_point(aes(colour = Region, shape=TraitType), size = 4, alpha = .4) + 
               scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2","Edge"="steelblue")) +
-              labs(x = "PC1", y = "Absolute Plasticity") +
+              labs(x = "PC1", y = "Plasticity (CV)") +
               theme_bw(base_size = 11, base_family = "Times") +
               theme(axis.text=element_text(size=14), 
                     axis.title=element_text(size=18),
@@ -382,15 +407,15 @@ cowplot::plot_grid(Phenology+ theme(legend.position="none"), legend_ba, ncol = 2
 
 ### Growth  
 ```{r}
-growth_plastic <- subset(Plasticity, select=-c(BudSet2019_Plasticity, BudSet2020_Plasticity, BudBreak2020_Plasticity));
-growth_plastic <- left_join(growth_plastic,subset(Provenance_MAT, select=c(Population,Family,PC1_sel,MAT)))
+growth_plastic <- subset(Plasticity, select=-c(BudBreak_DOY,BudBreak_cGDD,BudSet_2020,BudSet_2019));
 
-growth_plastic <- growth_plastic %>% tidyr::pivot_longer(cols=c("growth2019_Plasticity":"growth2020_Plasticity"),
+
+growth_plastic <- growth_plastic %>% tidyr::pivot_longer(cols=c("Growth_2019":"Growth_2020"),
                                                            names_to = "Traits",
                                                            values_to = "value")
-
-growth_plastic$Year <- ifelse(endsWith(growth_plastic$Traits, "2020_Plasticity"), "2020", "2019")
-growth_plastic <- dplyr::rename(growth_plastic, PC1 = PC1_sel)
+growth_plastic$TraitType <- "Growth"
+growth_plastic$Year <- ifelse(endsWith(growth_plastic$Traits, "2020"), "2020", "2019")
+# growth_plastic <- dplyr::rename(growth_plastic, PC1 = PC1_sel)
 
 # Add population means to the main dataframe
 growth_plastic <- left_join(growth_plastic,Provenance_pop)
@@ -403,7 +428,7 @@ Growth <- ggplot(data=growth_plastic,
        geom_point(aes(colour = Region), size = 4, alpha = .4) + 
   scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2","Edge"="steelblue",
                                 "growth2019_Plasticity"="darkred", "growth2020_Plasticity"="limegreen")) +
-  labs(x = "PC1", y = "Absolute Plasticity") +
+  labs(x = "PC1", y = "Plasticity (CV)") +
   theme_bw(base_size = 11, base_family = "Times") +
   theme(axis.text=element_text(size=14), 
         axis.title=element_text(size=18),
@@ -440,113 +465,6 @@ cowplot::plot_grid(Growth+ theme(legend.position="none"), legend_bb, ncol = 2, r
   
 ```
 
-
-
-
-
-
-## Home vs Away Viz {.tabset .tabset-fade .tabset-pills}  
-
-### data  
-```{r}
-homeAway <- read.csv("./trait_data/Home_vs_Away.csv", header = T, stringsAsFactors = T, sep=","); homeAway <- homeAway[,-1]
-
-meta <- exome_meta;colnames(meta)[1] <- "Population";meta$Region <- factor(meta$Region, levels=c("C","M","E"));meta$Region <- plyr::revalue(meta$Region, c("C"="Core","M"="Margin","E"="Edge"))
-
-
-homeAway <- left_join(homeAway,subset(meta,select=c(Population,Family,Region)))
-homeAway$Environment <- factor(homeAway$Environment, levels=c("home","away"))
-homeAway <- left_join(homeAway,subset(Provenance_MAT, select=c(Population,Family,PC1_sel,MAT)))
-homeAway <- dplyr::rename(homeAway, c(PC1 = PC1_sel))
-```
-
-**Budset 2019**  
-```{r}
-A <-   ggplot(homeAway[homeAway$Trait=="BudSet2019",],aes(x=Environment,value))+
-    facet_grid(.~Region) + 
-  geom_line(aes(y=value,group=Family, color=PC1)) +
-                  xlab("") + ylab("Bud set (DOY)") +
-  scale_color_viridis(option = "A", direction = -1) +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                     axis.title=element_text(size=14,face="bold"),
-                     legend.title = element_text(color = "black", size = 14),
-                     legend.text = element_text(color = "black", size = 13))
-```
-
-
-**Budset 2020**  
-```{r}
-B <-   ggplot(homeAway[homeAway$Trait=="BudSet2020",],aes(x=Environment,value))+
-    facet_grid(.~Region) + 
-  geom_line(aes(y=value,group=Family, color=PC1)) +
-                  xlab("") + ylab("") +
-  scale_color_viridis(option = "A", direction = -1) +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                     axis.title=element_text(size=14,face="bold"),
-                     legend.title = element_text(color = "black", size = 14),
-                     legend.text = element_text(color = "black", size = 13))
-```
-
-**Budbreak 2020**  
-```{r}
-C <-   ggplot(homeAway[homeAway$Trait=="BudBreak2020",],aes(x=Environment,value))+
-    facet_grid(.~Region) + 
-  geom_line(aes(y=value,group=Family, color=PC1)) +
-                  xlab("") + ylab("Bud break (cGDD)") +
-  scale_color_viridis(option = "A", direction = -1) +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                     axis.title=element_text(size=14,face="bold"),
-                     legend.title = element_text(color = "black", size = 14),
-                     legend.text = element_text(color = "black", size = 13))
-```
-
-**Growth 2019**   
-```{r}
-D <-   ggplot(homeAway[homeAway$Trait=="Growth2019",],aes(x=Environment,value))+
-    facet_grid(.~Region) + 
-  geom_line(aes(y=value,group=Family, color=PC1)) +
-                  xlab("2019") + ylab("Growth (cm)") +
-  scale_color_viridis(option = "A", direction = -1) +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                     axis.title=element_text(size=14,face="bold"),
-                     legend.title = element_text(color = "black", size = 14),
-                     legend.text = element_text(color = "black", size = 13))
-```
-
-**Growth 2020**  
-```{r}
-E <-   ggplot(homeAway[homeAway$Trait=="Growth2020",],aes(x=Environment,value))+
-    facet_grid(.~Region) + 
-  geom_line(aes(y=value,group=Family, color=PC1)) +
-                  xlab("2020") + ylab("") +
-  scale_color_viridis(option = "A", direction = -1) +
-  theme_bw() + theme(axis.text=element_text(size=14), 
-                     axis.title=element_text(size=14,face="bold"),
-                     legend.title = element_text(color = "black", size = 14),
-                     legend.text = element_text(color = "black", size = 13))
-```
-
-### Visualization  
-
-```{r}
-legend <- get_legend(E + theme(legend.position="right"))
-
-HA_grid <- cowplot::plot_grid( A + theme(legend.position="none"),
-           B + theme(legend.position="none"),
-           legend,
-           C + theme(legend.position="none"),
-           D + theme(legend.position="none"),
-           E + theme(legend.position="none"),
-           align = 'vh',
-           labels = c("A", "B","" ,"C", "D","E"),
-           hjust = -1,
-           nrow = 3
-           )
-
-HA_grid
-```
-
-
 ### ANOVA   
 ```{r}
 sjPlot::tab_model(budset2019_PC1_mod1, budset2020_PC1_mod1, budbreak2020_PC1_mod1,growth2019_PC1_mod1, growth2020_PC1_mod1,
@@ -556,4 +474,993 @@ sjPlot::tab_model(budset2019_PC1_mod1, budset2020_PC1_mod1, budbreak2020_PC1_mod
                   string.p = "P-Value",
                   p.style = "stars")
 ```
+
+
+## Figure for paper  
+```{r echo=F}
+plast_comb <- rbind(growth_plastic,Plasticity_pheno)  
+
+# growth
+ggplot(data=plast_comb,
+                   mapping = aes(x=PC1,y=abs(value),group=Traits)) + 
+                   geom_smooth(method='lm', formula= y~x, show.legend = FALSE, col="darkred") + theme_minimal() + 
+                   geom_point(aes(colour = Region, shape=TraitType), size = 4, alpha = .4) + 
+              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2","Edge"="steelblue")) +
+              labs(x = "PC1", y = "Plasticity (CV)") +
+              theme_bw(base_size = 11, base_family = "Times") +
+              theme(axis.text=element_text(size=14), 
+                    axis.title=element_text(size=18),
+                    panel.background = element_blank(), 
+                    legend.background = element_blank(), 
+                    panel.grid = element_blank(), 
+                    plot.background = element_blank(), 
+                    legend.text=element_text(size=rel(.8)), 
+                    strip.text = element_text(size=30)) + 
+              facet_grid(.~Year) +
+                    theme(strip.text.x = element_text(size = 30))
+
+
+comb <- ggplot(data=plast_comb,
+                   mapping = aes(x=PC1,y=abs(value),group=Traits)) + 
+                   
+              # scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2","Edge"="steelblue")) +
+              geom_point(aes(colour = Year, 
+                                  shape=Region), size = 4, alpha = .30) + 
+              geom_smooth(aes(group = Year, color=Year),
+                               method='lm', formula= y~x, show.legend = T) + 
+              scale_shape_manual(values=c(21, 24, 22)) +
+              theme_minimal() + 
+                   
+  
+              labs(x = "PC1", y = "Plasticity (CV)") +
+              theme_bw(base_size = 11, base_family = "Times") +
+              theme(axis.text=element_text(size=14), 
+                    axis.title=element_text(size=18),
+                    panel.background = element_blank(), 
+                    legend.background = element_blank(), 
+                    panel.grid = element_blank(), 
+                    plot.background = element_blank(), 
+                    legend.text=element_text(size=rel(.8)), 
+                    strip.text = element_text(size=30)) + 
+              facet_grid(.~TraitType) + 
+                    theme(strip.text.x = element_text(size = 30))
+
+comb_legend_year <- ggplot(data=plast_comb,
+                     mapping = aes(x=PC1,y=abs(value),group=Traits)) + 
+                     geom_smooth(aes(group = Year, color=Year),method='lm', formula= y~x, show.legend = T) + theme_minimal() + 
+                     theme_bw() + theme(axis.text=element_text(size=10), 
+                                                               axis.title=element_text(size=12),
+                                                               legend.position = "right",
+                                                               legend.title=element_text(size=21),
+                                                               legend.text=element_text(size=20),
+                                                               plot.background = element_blank(),
+                                                               panel.grid.major = element_blank(),
+                                                               panel.grid.minor = element_blank(),
+                                                               panel.background = element_blank(),
+                                                               plot.title = element_blank()) + 
+                    guides(color = guide_legend(override.aes = list(size = 8)))
+
+
+
+comb_legend_region <- ggplot(data=plast_comb,
+                     mapping = aes(x=PC1,y=abs(value),group=Traits)) + 
+                     geom_point(aes(shape=Region), size = 4, alpha = .30) + theme_minimal() + 
+                     scale_shape_manual(values=c(21, 24, 22)) +
+                     theme_bw() + theme(axis.text=element_text(size=10), 
+                                                               axis.title=element_text(size=12),
+                                                               legend.position = "right",
+                                                               legend.title=element_text(size=21),
+                                                               legend.text=element_text(size=20),
+                                                               plot.background = element_blank(),
+                                                               panel.grid.major = element_blank(),
+                                                               panel.grid.minor = element_blank(),
+                                                               panel.background = element_blank(),
+                                                               plot.title = element_blank()) + 
+                    guides(color = guide_legend(override.aes = list(size = 8)))
+
+
+legend_comb_year <- get_legend(comb_legend_year + theme(legend.position="right"))
+legend_comb_region <- get_legend(comb_legend_region + theme(legend.position="right"))
+
+legend_comb <- cowplot::plot_grid(legend_comb_year, legend_comb_region, ncol = 1)
+
+# final 
+plasticity_PCA <- cowplot::plot_grid(comb+ theme(legend.position="none"), legend_comb, ncol = 2, rel_widths = c(1,.09))
+
+plasticity_PCA
+```
+
+
+
+
+# Plasticity vs Height Growth  
+
+## Height growth of 2019   {.tabset .tabset-fade .tabset-pills}  
+
+- Means vs Plasticity
+
+### Family data  
+```{r}
+# blups for height growth
+heightGrowth_2019_2 <- heightGrowth_2019
+heightGrowth_2019_2 <- heightGrowth_2019_2%>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
+
+HeightGrowth_2019_mod <- lmer(Growth ~ Garden + (1|mBed) + (1|Family), heightGrowth_2019_2)
+
+HeightGrowth_2019_blup <- ranef(HeightGrowth_2019_mod)
+HeightGrowth_2019_blup <- HeightGrowth_2019_blup$Family
+HeightGrowth_2019_blup <- cbind(Family=rownames(HeightGrowth_2019_blup),HeightGrowth_2019_blup)
+rownames(HeightGrowth_2019_blup) <- NULL
+names(HeightGrowth_2019_blup)[2] <- "Height_Growth"
+
+# plasticity based on height growth 
+HeightGrowth_2019_blup <- merge(x=HeightGrowth_2019_blup,
+                                y=Plasticity[,c("Family","Growth_2019")],
+                                by="Family")
+# rename plasticity column
+colnames(HeightGrowth_2019_blup)[colnames(HeightGrowth_2019_blup)=="Growth_2019"] <- "Plasticity"
+
+# remove NAs
+HeightGrowth_2019_blup <- HeightGrowth_2019_blup[!is.na(HeightGrowth_2019_blup$Plasticity),]
+
+# Population column creation
+HeightGrowth_2019_blup$Population <- gsub("\\_.*", "", HeightGrowth_2019_blup$Family)
+
+# merge climateNA data
+HeightGrowth_2019_blup <- merge(x=HeightGrowth_2019_blup,
+                               y=Family_climateNA[,c("Population","PC1","MAT")],
+                               by="Population")
+
+# merge Region data
+HeightGrowth_2019_blup <- merge(x=HeightGrowth_2019_blup,
+                               y=heightGrowth_2019[,c("Population","Region")],
+                               by="Population")
+
+# reorder regions
+HeightGrowth_2019_blup$Region <- factor(HeightGrowth_2019_blup$Region,levels = c("Core", "Margin", "Edge"))
+
+HeightGrowth_2019_blup <- distinct(HeightGrowth_2019_blup)
+
+HeightGrowth_2019_blup$Abs_P <- abs(HeightGrowth_2019_blup$Plasticity)
+```
+
+### Population data  
+```{r}
+HeightGrowth_2019_blup$Population <- as.factor(HeightGrowth_2019_blup$Population)
+
+HeightGrowth_2019_pop <- HeightGrowth_2019_blup %>%
+                            select(Population, Height_Growth, Plasticity, Region) %>%
+                            group_by(Population) %>%
+                            dplyr::summarise(Height_Growth = mean(Height_Growth), Plasticity = mean(Plasticity))
+
+HeightGrowth_2019_pop <- merge(x=HeightGrowth_2019_pop,
+                               y=Population_climateNA[,c("Population","PC1","MAT")],
+                               by="Population")
+
+HeightGrowth_2019_pop <- merge(x=HeightGrowth_2019_pop,
+                               y=heightGrowth_2019[,c("Population","Region")],
+                               by="Population")
+# reorder regions
+HeightGrowth_2019_pop$Region <- factor(HeightGrowth_2019_pop$Region,levels = c("Core", "Margin", "Edge"))
+
+HeightGrowth_2019_pop <- distinct(HeightGrowth_2019_pop)
+
+HeightGrowth_2019_pop$Abs_P <- abs(HeightGrowth_2019_pop$Plasticity)
+```
+
+
+### Family plot  
+
+```{r}
+HeightGrowth_2019_fam_abs_mod <- lm(Height_Growth ~ Abs_P + Region + Abs_P*Region,
+                                    data=HeightGrowth_2019_blup)
+summary(HeightGrowth_2019_fam_abs_mod)
+
+```
+- Absolute plasticity is not significant.  
+- Absolute plasticity's interaction with Core and Edge region are significant***.  
+
+```{r echo=F}
+
+
+# region inset
+HeightGrowth_2019_blup_inset2 <- sjPlot::plot_model(HeightGrowth_2019_fam_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity", y = "Height Growth (BLUP)") + 
+                                theme_bw() + theme(axis.text=element_text(size=10), 
+                                                 axis.title=element_text(size=12),
+                                                 legend.position = "top",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) 
+
+
+
+HeightGrowth_2019_blup_inset2
+```
+
+### Population plot  
+
+```{r}
+HeightGrowth_2019_pop_abs_mod <- lm(Height_Growth ~ Abs_P + Region + Abs_P*Region,
+                                    data=HeightGrowth_2019_pop)
+summary(HeightGrowth_2019_pop_abs_mod)
+```
+- Absolute plasticity is not significant.  
+- Absolute plasticity's interaction with Core, Margin and Edge region are significant*.   
+
+```{r echo=F}
+# region inset
+HeightGrowth_2019_pop_inset2 <- sjPlot::plot_model(HeightGrowth_2019_pop_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity", y = "Fitness") + 
+                                theme_bw() + theme(axis.text=element_text(size=10), 
+                                                 axis.title=element_text(size=12),
+                                                 legend.position = "top",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) 
+
+
+HeightGrowth_2019_pop_inset2
+```
+
+## Height growth of 2020     {.tabset .tabset-fade .tabset-pills}  
+
+- Means vs Plasticity  
+
+### Family data  
+```{r}
+# blups for height growth
+heightGrowth_2020_2 <- heightGrowth_2020
+heightGrowth_2020_2 <- heightGrowth_2020_2%>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
+
+HeightGrowth_2020_mod <- lmer(Growth ~ Garden + (1|mBed) + (1|Family), heightGrowth_2020_2)
+
+HeightGrowth_2020_blup <- ranef(HeightGrowth_2020_mod)
+HeightGrowth_2020_blup <- HeightGrowth_2020_blup$Family
+HeightGrowth_2020_blup <- cbind(Family=rownames(HeightGrowth_2020_blup),HeightGrowth_2020_blup)
+rownames(HeightGrowth_2020_blup) <- NULL
+names(HeightGrowth_2020_blup)[2] <- "Height_Growth"
+
+# plasticity based on height growth 
+HeightGrowth_2020_blup <- merge(x=HeightGrowth_2020_blup,
+                                y=Plasticity[,c("Family","Growth_2020")],
+                                by="Family")
+# rename plasticity column
+colnames(HeightGrowth_2020_blup)[colnames(HeightGrowth_2020_blup)=="Growth_2020"] <- "Plasticity"
+
+# remove NAs
+HeightGrowth_2020_blup <- HeightGrowth_2020_blup[!is.na(HeightGrowth_2020_blup$Plasticity),]
+
+# Population column creation
+HeightGrowth_2020_blup$Population <- gsub("\\_.*", "", HeightGrowth_2020_blup$Family)
+
+# merge climateNA data
+HeightGrowth_2020_blup <- merge(x=HeightGrowth_2020_blup,
+                               y=Family_climateNA[,c("Population","PC1","MAT")],
+                               by="Population")
+
+# merge Region data
+HeightGrowth_2020_blup <- merge(x=HeightGrowth_2020_blup,
+                               y=heightGrowth_2020[,c("Population","Region")],
+                               by="Population")
+# reorder regions
+HeightGrowth_2020_blup$Region <- factor(HeightGrowth_2020_blup$Region,levels = c("Core", "Margin", "Edge"))
+
+HeightGrowth_2020_blup <- distinct(HeightGrowth_2020_blup)
+
+HeightGrowth_2020_blup$Abs_P <- abs(HeightGrowth_2020_blup$Plasticity)
+```
+
+### Population data  
+```{r}
+HeightGrowth_2020_blup$Population <- as.factor(HeightGrowth_2020_blup$Population)
+
+HeightGrowth_2020_pop <- HeightGrowth_2020_blup %>%
+                            select(Population, Height_Growth, Plasticity, Region) %>%
+                            group_by(Population) %>%
+                            dplyr::summarise(Height_Growth = mean(Height_Growth), Plasticity = mean(Plasticity))
+
+HeightGrowth_2020_pop <- merge(x=HeightGrowth_2020_pop,
+                               y=Population_climateNA[,c("Population","PC1","MAT")],
+                               by="Population")
+
+HeightGrowth_2020_pop <- merge(x=HeightGrowth_2020_pop,
+                               y=heightGrowth_2019[,c("Population","Region")],
+                               by="Population")
+# reorder regions
+HeightGrowth_2020_pop$Region <- factor(HeightGrowth_2020_pop$Region,levels = c("Core", "Margin", "Edge"))
+
+HeightGrowth_2020_pop <- distinct(HeightGrowth_2020_pop)
+
+HeightGrowth_2020_pop$Abs_P <- abs(HeightGrowth_2020_pop$Plasticity)
+```
+
+### Family plot  
+
+```{r}
+HeightGrowth_2020_fam_abs_mod <- lm(Height_Growth ~ Abs_P + Region + Abs_P*Region,
+                                    data=HeightGrowth_2020_blup)
+summary(HeightGrowth_2020_fam_abs_mod)
+```
+
+- Absolute plasticity is significant***.  
+- Absolute plasticity's interaction with Core and Margin region is significant***.
+
+
+```{r echo=F}
+# region inset
+HeightGrowth_2020_blup_inset2 <- sjPlot::plot_model(HeightGrowth_2020_fam_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity", y = "Fitness") + 
+                                theme_bw() + theme(axis.text=element_text(size=10), 
+                                                 axis.title=element_text(size=12),
+                                                 legend.position = "top",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) 
+
+HeightGrowth_2020_blup_inset2
+```
+
+### Population plot   
+
+```{r}
+HeightGrowth_2020_pop_abs_mod <- lm(Height_Growth ~ Abs_P + Region + Abs_P*Region,
+                                    data=HeightGrowth_2020_pop)
+summary(HeightGrowth_2020_pop_abs_mod)
+```
+
+- Absolute plasticity is significant*.  
+- Absolute plasticity's interaction with Margin region is significant***.
+
+```{r echo=F}
+
+# region inset
+HeightGrowth_2020_pop_inset2 <- sjPlot::plot_model(HeightGrowth_2020_pop_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity", y = "Fitness") + 
+                                theme_bw() + theme(axis.text=element_text(size=10), 
+                                                 axis.title=element_text(size=12),
+                                                 legend.position = "top",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) 
+
+
+HeightGrowth_2020_pop_inset2
+
+```
+
+
+## Budbreak 2020 Plasticity    {.tabset .tabset-fade .tabset-pills}
+
+### Family data  
+```{r}
+# blups for height growth
+heightGrowth_2020_2 <- heightGrowth_2020
+heightGrowth_2020_2 <- heightGrowth_2020_2 %>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
+
+HeightGrowth_2020_mod <- lmer(Growth ~ Garden + (1|mBed) + (1|Family), heightGrowth_2020_2)
+
+HeightGrowth_2020_blup <- ranef(HeightGrowth_2020_mod)
+HeightGrowth_2020_blup <- HeightGrowth_2020_blup$Family
+HeightGrowth_2020_blup <- cbind(Family=rownames(HeightGrowth_2020_blup),HeightGrowth_2020_blup)
+rownames(HeightGrowth_2020_blup) <- NULL
+names(HeightGrowth_2020_blup)[2] <- "Height_Growth"
+
+# plasticity based on budbreak 2020 
+gw_20_B_bb_20_P <- merge(x=HeightGrowth_2020_blup,
+                         y=Plasticity[,c("Family","BudBreak_cGDD")],
+                         by="Family")
+# rename plasticity column if needed
+colnames(gw_20_B_bb_20_P)[colnames(gw_20_B_bb_20_P) == "BudBreak_cGDD"] <- "BudBreak2020_Plasticity"
+
+# remove NAs
+gw_20_B_bb_20_P <- gw_20_B_bb_20_P[!is.na(gw_20_B_bb_20_P$BudBreak2020_Plasticity),]
+
+# Population column creation
+gw_20_B_bb_20_P$Population <- gsub("\\_.*", "", gw_20_B_bb_20_P$Family)
+
+# merge climateNA data
+gw_20_B_bb_20_P <- merge(x=gw_20_B_bb_20_P,
+                               y=Family_climateNA[,c("Population","PC1","MAT")],
+                               by="Population")
+
+# merge Region data
+gw_20_B_bb_20_P <- merge(x=gw_20_B_bb_20_P,
+                               y=heightGrowth_2020[,c("Population","Region")],
+                               by="Population")
+# reorder regions
+gw_20_B_bb_20_P$Region <- factor(gw_20_B_bb_20_P$Region,levels = c("Core", "Margin", "Edge"))
+
+
+gw_20_B_bb_20_P <- distinct(gw_20_B_bb_20_P)
+
+gw_20_B_bb_20_P$Abs_P <- abs(gw_20_B_bb_20_P$BudBreak2020_Plasticity)
+```
+
+### Population data  
+```{r}
+gw_20_B_bb_20_P$Population <- as.factor(gw_20_B_bb_20_P$Population)
+
+gw_20_B_bb_20_P_pop <- gw_20_B_bb_20_P %>%
+                            select(Population, Height_Growth, BudBreak2020_Plasticity, Region) %>%
+                            group_by(Population) %>%
+                            dplyr::summarise(Height_Growth = mean(Height_Growth), BudBreak2020_Plasticity = mean(BudBreak2020_Plasticity))
+
+gw_20_B_bb_20_P_pop <- merge(x=gw_20_B_bb_20_P_pop,
+                               y=Population_climateNA[,c("Population","PC1","MAT")],
+                               by="Population")
+
+gw_20_B_bb_20_P_pop <- merge(x=gw_20_B_bb_20_P_pop,
+                               y=heightGrowth_2019[,c("Population","Region")],
+                               by="Population")
+# reorder regions
+gw_20_B_bb_20_P_pop$Region <- factor(gw_20_B_bb_20_P_pop$Region,levels = c("Core", "Margin", "Edge"))
+
+gw_20_B_bb_20_P_pop <- distinct(gw_20_B_bb_20_P_pop)
+
+gw_20_B_bb_20_P_pop$Abs_P <- abs(gw_20_B_bb_20_P_pop$BudBreak2020_Plasticity)
+```
+
+### Family plot  
+
+```{r}
+gw_20_B_bb_20_P_U <- dplyr::distinct(gw_20_B_bb_20_P, Abs_P,Height_Growth, .keep_all=T)
+
+gw_20_B_bb_20_P_fam_abs_mod <- lm(Height_Growth ~ Abs_P + Region + Abs_P*Region,
+                                    data=gw_20_B_bb_20_P_U)
+summary(gw_20_B_bb_20_P_fam_abs_mod)
+anova(gw_20_B_bb_20_P_fam_abs_mod)
+```
+
+- Absolute plasticity is not significant.  
+- Absolute plasticity's interaction with Margin region is significant***.  
+
+```{r}
+bb_A1 <- sjPlot::plot_model(gw_20_B_bb_20_P_fam_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity of bud break in 2020", y = "Height Growth (BLUP)") + 
+                                theme_bw() + theme(axis.text=element_text(size=14), 
+                                                 axis.title=element_text(size=18),
+                                                 legend.position = "bottom",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank())
+
+bb_A <- bb_A1 + geom_point(data=gw_20_B_bb_20_P_U, 
+                                           aes(x = abs(BudBreak2020_Plasticity), y = Height_Growth, color = Region, 
+                                               shape = Region), size=4, alpha = 0.25, 
+                                           inherit.aes = FALSE) 
+bb_A
+```
+
+### Population plot  
+
+```{r}
+gw_20_B_bb_20_P_pop_U <- dplyr::distinct(gw_20_B_bb_20_P_pop, Abs_P,Height_Growth, .keep_all=T)
+
+gw_20_B_bb_20_P_pop_abs_mod <- lm(Height_Growth ~ Abs_P + Region + Abs_P*Region,
+                                    data=gw_20_B_bb_20_P_pop_U)
+summary(gw_20_B_bb_20_P_pop_abs_mod)
+anova(gw_20_B_bb_20_P_pop_abs_mod)
+```
+
+- Absolute plasticity is not significant.  
+- Absolute plasticity's interaction with Margin region is significant***.  
+
+```{r}
+# updated fig for the paper 
+bb_B1 <- sjPlot::plot_model(gw_20_B_bb_20_P_pop_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Absolute plasticity of bud break in 2020 (Population)", y = "") + 
+                                theme_bw() + theme(axis.text=element_text(size=14), 
+                                                 axis.title=element_text(size=18),
+                                                 legend.position = "bottom",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) 
+
+bb_B <- bb_B1 + geom_point(data=gw_20_B_bb_20_P_pop_U, 
+                                           aes(x = abs(BudBreak2020_Plasticity), y = Height_Growth, color = Region, 
+                                               shape = Region), size=4, alpha = 0.25, 
+                                           inherit.aes = FALSE) 
+
+bb_B
+```
+
+```{r}
+# combined for the paper 
+# create legend
+test <- ggplot() + geom_point(data=gw_20_B_bb_20_P_U, 
+                                           aes(x = abs(BudBreak2020_Plasticity), y = Height_Growth, color = Region, 
+                                               shape = Region), size=3, alpha = 1, 
+                                           inherit.aes = FALSE) + 
+  scale_color_manual(values = c("goldenrod2", "green2", "steelblue")) +
+  theme_bw() + theme(axis.text=element_text(size=10), 
+                                                 axis.title=element_text(size=12),
+                                                 legend.position = "bottom",
+                                                 legend.title=element_text(size=21),
+                                                 legend.text=element_text(size=20),
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) + 
+  guides(color = guide_legend(override.aes = list(size = 8)))
+
+legend_bb <- get_legend(test + theme(legend.position="bottom"))
+
+
+BB_grid <- cowplot::plot_grid( bb_A + theme(legend.position="none"),
+           bb_B + theme(legend.position="none"),
+           align = 'vh',
+           labels = c("A", "B"),
+           hjust = -1,
+           nrow = 1
+           )
+# bud break final 
+bb_comb <- cowplot::plot_grid(BB_grid, legend_bb, ncol = 1, rel_heights = c(1,.2))
+```
+
+
+ 
+## Budset 2019 Plasticity   {.tabset .tabset-fade .tabset-pills}  
+
+### Family data  
+```{r}
+# blups for height growth
+heightGrowth_2019_2 <- heightGrowth_2019
+heightGrowth_2019_2 <- heightGrowth_2019_2%>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
+
+HeightGrowth_2019_mod <- lmer(Growth ~ Garden + (1|mBed) + (1|Family), heightGrowth_2019_2)
+
+# HeightGrowth_2019_blup <- coef(HeightGrowth_2019_mod)
+
+HeightGrowth_2019_blup <- ranef(HeightGrowth_2019_mod)
+
+HeightGrowth_2019_blup <- HeightGrowth_2019_blup$Family
+HeightGrowth_2019_blup <- cbind(Family=rownames(HeightGrowth_2019_blup),HeightGrowth_2019_blup)
+rownames(HeightGrowth_2019_blup) <- NULL
+names(HeightGrowth_2019_blup)[2] <- "Height_Growth"
+
+# plasticity based on budset 2019 
+gw_19_B_bs_19_P <- merge(x=HeightGrowth_2019_blup,
+                         y=Plasticity[,c("Family","BudSet_2019")],
+                         by="Family")
+# rename plasticity column if needed
+colnames(gw_19_B_bs_19_P)[colnames(gw_19_B_bs_19_P)=="BudSet_2019"] <- "BudSet2019_Plasticity"
+
+# remove NAs
+gw_19_B_bs_19_P <- gw_19_B_bs_19_P[!is.na(gw_19_B_bs_19_P$BudSet2019_Plasticity),]
+
+# Population column creation
+gw_19_B_bs_19_P$Population <- gsub("\\_.*", "", gw_19_B_bs_19_P$Family)
+
+# merge climateNA data
+gw_19_B_bs_19_P <- merge(x=gw_19_B_bs_19_P,
+                               y=Family_climateNA[,c("Population","PC1","MAT")],
+                               by="Population")
+
+# merge Region data
+gw_19_B_bs_19_P <- merge(x=gw_19_B_bs_19_P,
+                               y=heightGrowth_2019[,c("Population","Region")],
+                               by="Population")
+# reorder regions
+gw_19_B_bs_19_P$Region <- factor(gw_19_B_bs_19_P$Region,levels = c("Core", "Margin", "Edge"))
+
+gw_19_B_bs_19_P <- distinct(gw_19_B_bs_19_P)
+
+gw_19_B_bs_19_P$Abs_P <- abs(gw_19_B_bs_19_P$BudSet2019_Plasticity)
+```
+
+### Population data  
+```{r}
+gw_19_B_bs_19_P$Population <- as.factor(gw_19_B_bs_19_P$Population)
+
+gw_19_B_bs_19_P_pop <- gw_19_B_bs_19_P %>%
+                            select(Population, Height_Growth, BudSet2019_Plasticity, Region) %>%
+                            group_by(Population) %>%
+                            dplyr::summarise(Height_Growth = mean(Height_Growth), BudSet2019_Plasticity = mean(BudSet2019_Plasticity))
+
+gw_19_B_bs_19_P_pop <- merge(x=gw_19_B_bs_19_P_pop,
+                               y=Population_climateNA[,c("Population","PC1","MAT")],
+                               by="Population")
+
+gw_19_B_bs_19_P_pop <- merge(x=gw_19_B_bs_19_P_pop,
+                               y=heightGrowth_2019[,c("Population","Region")],
+                               by="Population")
+# reorder regions
+gw_19_B_bs_19_P_pop$Region <- factor(gw_19_B_bs_19_P_pop$Region,levels = c("Core", "Margin", "Edge"))
+
+gw_19_B_bs_19_P_pop <- distinct(gw_19_B_bs_19_P_pop)
+
+gw_19_B_bs_19_P_pop$Abs_P <- abs(gw_19_B_bs_19_P_pop$BudSet2019_Plasticity)
+```
+
+### Family plot  
+
+```{r}
+gw_19_B_bs_19_P_U <- dplyr::distinct(gw_19_B_bs_19_P, Abs_P,Height_Growth, .keep_all=T)
+
+gw_19_B_bs_19_P_fam_abs_mod <- lm(Height_Growth ~ Abs_P + Region + Abs_P*Region,
+                                    data=gw_19_B_bs_19_P_U)
+summary(gw_19_B_bs_19_P_fam_abs_mod)
+anova(gw_19_B_bs_19_P_fam_abs_mod)
+```
+
+- Absolute plasticity is significant***.  
+- Absolute plasticity's interaction with Core and Edge region is significant***.  
+
+```{r}
+
+# updated fig for the paper 
+
+
+bs_A1 <- sjPlot::plot_model(gw_19_B_bs_19_P_fam_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity of bud set in 2019 (Family)", y = "Height Growth (BLUP)") + 
+                                theme_bw() + theme(axis.text=element_text(size=14), 
+                                                 axis.title=element_text(size=18),
+                                                 legend.position = "bottom",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) 
+
+bs_A <- bs_A1 + geom_point(data=gw_19_B_bs_19_P_U, 
+                                           aes(x = abs(BudSet2019_Plasticity), y = Height_Growth, color = Region, 
+                                               shape = Region), size=4, alpha = 0.25, 
+                                           inherit.aes = FALSE) 
+
+
+bs_A
+```
+
+### Population plot  
+
+```{r}
+gw_19_B_bs_19_P_pop_U <- dplyr::distinct(gw_19_B_bs_19_P_pop, Abs_P,Height_Growth, .keep_all=T)
+
+gw_19_B_bs_19_P_pop_abs_mod <- lm(Height_Growth ~ Abs_P + Region + Abs_P*Region,
+                                    data=gw_19_B_bs_19_P_pop_U)
+summary(gw_19_B_bs_19_P_pop_abs_mod)
+anova(gw_19_B_bs_19_P_pop_abs_mod)
+```
+
+- Absolute plasticity is significant*.  
+- Absolute plasticity's interaction with Core*** and Edge* region is significant***.  
+
+```{r}
+# updated fig for the paper 
+bs_B1 <- sjPlot::plot_model(gw_19_B_bs_19_P_pop_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity of bud set in 2019 (Population)", y = "") + 
+                                theme_bw() + theme(axis.text=element_text(size=14), 
+                                                 axis.title=element_text(size=18),
+                                                 legend.position = "bottom",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) 
+
+bs_B <- bs_B1 + geom_point(data=gw_19_B_bs_19_P_pop_U, 
+                                           aes(x = abs(BudSet2019_Plasticity), y = Height_Growth, color = Region, 
+                                               shape = Region), size=4, alpha = 0.25, 
+                                           inherit.aes = FALSE) 
+
+bs_B
+```
+
+## Budset 2020 Plasticity  {.tabset .tabset-fade .tabset-pills}   
+### Family data  
+```{r}
+# blups for height growth
+heightGrowth_2020_2 <- heightGrowth_2020
+heightGrowth_2020_2 <- heightGrowth_2020_2 %>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
+
+HeightGrowth_2020_mod <- lmer(Growth ~ Garden + (1|mBed) + (1|Family), heightGrowth_2020_2)
+
+HeightGrowth_2020_blup <- ranef(HeightGrowth_2020_mod)
+HeightGrowth_2020_blup <- HeightGrowth_2020_blup$Family
+HeightGrowth_2020_blup <- cbind(Family=rownames(HeightGrowth_2020_blup),HeightGrowth_2020_blup)
+rownames(HeightGrowth_2020_blup) <- NULL
+names(HeightGrowth_2020_blup)[2] <- "Height_Growth"
+
+# plasticity based on budset 2020 
+gw_20_B_bs_20_P <- merge(x=HeightGrowth_2020_blup,
+                         y=Plasticity[,c("Family","BudSet_2020")],
+                         by="Family")
+# rename plasticity column if needed
+colnames(gw_20_B_bs_20_P)[colnames(gw_20_B_bs_20_P)=="BudSet_2020"] <- "BudSet2020_Plasticity"
+
+# remove NAs
+gw_20_B_bs_20_P <- gw_20_B_bs_20_P[!is.na(gw_20_B_bs_20_P$BudSet2020_Plasticity),]
+
+# Population column creation
+gw_20_B_bs_20_P$Population <- gsub("\\_.*", "", gw_20_B_bs_20_P$Family)
+
+# merge climateNA data
+gw_20_B_bs_20_P <- merge(x=gw_20_B_bs_20_P,
+                               y=Family_climateNA[,c("Population","PC1","MAT")],
+                               by="Population")
+
+# merge Region data
+gw_20_B_bs_20_P <- merge(x=gw_20_B_bs_20_P,
+                               y=heightGrowth_2020[,c("Population","Region")],
+                               by="Population")
+# reorder regions
+gw_20_B_bs_20_P$Region <- factor(gw_20_B_bs_20_P$Region,levels = c("Core", "Margin", "Edge"))
+
+gw_20_B_bs_20_P <- distinct(gw_20_B_bs_20_P)
+
+gw_20_B_bs_20_P$Abs_P <- abs(gw_20_B_bs_20_P$BudSet2020_Plasticity)
+```
+
+### Population data  
+```{r}
+gw_20_B_bs_20_P$Population <- as.factor(gw_20_B_bs_20_P$Population)
+
+gw_20_B_bs_20_P_pop <- gw_20_B_bs_20_P %>%
+                            select(Population, Height_Growth, BudSet2020_Plasticity, Region) %>%
+                            group_by(Population) %>%
+                            dplyr::summarise(Height_Growth = mean(Height_Growth), BudSet2020_Plasticity = mean(BudSet2020_Plasticity))
+
+gw_20_B_bs_20_P_pop <- merge(x=gw_20_B_bs_20_P_pop,
+                               y=Population_climateNA[,c("Population","PC1","MAT")],
+                               by="Population")
+
+gw_20_B_bs_20_P_pop <- merge(x=gw_20_B_bs_20_P_pop,
+                               y=heightGrowth_2019[,c("Population","Region")],
+                               by="Population")
+# reorder regions
+gw_20_B_bs_20_P_pop$Region <- factor(gw_20_B_bs_20_P_pop$Region,levels = c("Core", "Margin", "Edge"))
+
+gw_20_B_bs_20_P_pop <- distinct(gw_20_B_bs_20_P_pop)
+
+gw_20_B_bs_20_P_pop$Abs_P <- abs(gw_20_B_bs_20_P_pop$BudSet2020_Plasticity)
+```
+
+### Family plot  
+
+```{r}
+gw_20_B_bs_20_P_U <- dplyr::distinct(gw_20_B_bs_20_P, Abs_P,Height_Growth, .keep_all=T)
+
+gw_20_B_bs_20_P_fam_abs_mod <- lm(Height_Growth ~ Abs_P + Region + Abs_P*Region,
+                                    data=gw_20_B_bs_20_P_U)
+summary(gw_20_B_bs_20_P_fam_abs_mod)
+anova(gw_20_B_bs_20_P_fam_abs_mod)
+```
+
+- Absolute plasticity is significant***.  
+- Absolute plasticity's interaction with Core, Margin and Edge region is significant***.  
+
+```{r}
+# updated fig for the paper 
+bs_C1 <- sjPlot::plot_model(gw_20_B_bs_20_P_fam_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity of bud set in 2020 (Family)", y = "Height Growth (BLUP)") + 
+                                theme_bw() + theme(axis.text=element_text(size=14), 
+                                                 axis.title=element_text(size=18),
+                                                 legend.position = "bottom",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) 
+
+bs_C <- bs_C1 + geom_point(data=gw_20_B_bs_20_P_U, 
+                                           aes(x = abs(BudSet2020_Plasticity), y = Height_Growth, color = Region, 
+                                               shape = Region), size=4, alpha = 0.25, 
+                                           inherit.aes = FALSE) 
+
+bs_C
+```
+
+### Population plot   
+
+```{r}
+gw_20_B_bs_20_P_pop_U <- dplyr::distinct(gw_20_B_bs_20_P_pop, Abs_P,Height_Growth, .keep_all=T)
+
+gw_20_B_bs_20_P_pop_abs_mod <- lm(Height_Growth ~ Abs_P + Region + Abs_P*Region,
+                                    data=gw_20_B_bs_20_P_pop_U)
+summary(gw_20_B_bs_20_P_pop_abs_mod)
+anova(gw_20_B_bs_20_P_pop_abs_mod)
+```
+
+- Absolute plasticity is significant**.  
+- Absolute plasticity's interaction with Core, Margin and Edge region is significant**.  
+
+```{r}
+# updated fig for the paper 
+bs_D1 <- sjPlot::plot_model(gw_20_B_bs_20_P_pop_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity of bud set in 2020 (Population)", y = "") + 
+                                theme_bw() + theme(axis.text=element_text(size=14), 
+                                                 axis.title=element_text(size=18),
+                                                 legend.position = "bottom",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) 
+
+bs_D <- bs_D1 + geom_point(data=gw_20_B_bs_20_P_pop_U, 
+                                           aes(x = abs(BudSet2020_Plasticity), y = Height_Growth, color = Region, 
+                                               shape = Region), size=4, alpha = 0.25, 
+                                           inherit.aes = FALSE) 
+
+bs_D
+```
+
+```{r}
+# combined
+
+# create legend
+legend_bb <- get_legend(test + theme(legend.position="bottom"))
+
+
+BS_grid <- cowplot::plot_grid( bs_A + theme(legend.position="none"),
+           bs_B + theme(legend.position="none"),
+           bs_C + theme(legend.position="none"),
+           bs_D + theme(legend.position="none"),
+           align = 'vh',
+           labels = c("A", "B", "C", "D"),
+           hjust = -1,
+           nrow = 2
+           )
+# bud set final 
+bs_plot <- cowplot::plot_grid(BS_grid, legend_bb, ncol = 1, rel_heights = c(1,.2))
+```
+
+## Figure for paper  
+***In text***  
+- Adaptive plasticity within population (Family level)  
+```{r echo=F}
+# budset 2019 
+bs_A1 <- sjPlot::plot_model(gw_19_B_bs_19_P_fam_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity of bud set in 2019", y = "") + 
+                                theme_bw() + theme(axis.text=element_text(size=14), 
+                                                 axis.title=element_text(size=18),
+                                                 legend.position = "bottom",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) 
+
+bs_A <- bs_A1 + geom_point(data=gw_19_B_bs_19_P_U, 
+                                           aes(x = abs(BudSet2019_Plasticity), y = Height_Growth, color = Region, 
+                                               shape = Region), size=4, alpha = 0.25, 
+                                           inherit.aes = FALSE) 
+
+# budset 2020
+bs_C1 <- sjPlot::plot_model(gw_20_B_bs_20_P_fam_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity of bud set in 2020", y = "") + 
+                                theme_bw() + theme(axis.text=element_text(size=14), 
+                                                 axis.title=element_text(size=18),
+                                                 legend.position = "bottom",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) 
+
+bs_C <- bs_C1 + geom_point(data=gw_20_B_bs_20_P_U, 
+                                           aes(x = abs(BudSet2020_Plasticity), y = Height_Growth, color = Region, 
+                                               shape = Region), size=4, alpha = 0.25, 
+                                           inherit.aes = FALSE) 
+
+
+pheno_grid <- 
+  cowplot::plot_grid( bb_A + theme(legend.position="none"),
+                       bs_A + theme(legend.position="none"),
+                       bs_C + theme(legend.position="none"),
+                       align = 'h',
+                       labels = c("A", "B", "C"),
+                       hjust = -1,
+                       nrow = 1
+                       )
+
+# legend
+temp_legend <- sjPlot::plot_model(gw_20_B_bb_20_P_fam_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity of bud break in 2020 (Family)", y = "Height Growth (BLUP)") + 
+                                theme_bw() + theme(axis.text=element_text(size=14), 
+                                                 axis.title=element_text(size=18),
+                                                 legend.position = "right",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank())
+
+legend_tmp <- get_legend(temp_legend + theme(legend.position="right"))
+
+# final 
+cowplot::plot_grid(pheno_grid+ theme(legend.position="none"), legend_tmp, ncol = 2, rel_widths = c(1,.09))
+```
+
+***In supplementary***  
+- Adaptive plasticity among population (Population level)  
+
+```{r echo=FALSE}
+# budbreak 2020
+bb_B1 <- sjPlot::plot_model(gw_20_B_bb_20_P_pop_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity of bud break in 2020", 
+                                     y = "Height Growth (BLUP)") + 
+                                theme_bw() + theme(axis.text=element_text(size=14), 
+                                                 axis.title=element_text(size=18),
+                                                 legend.position = "bottom",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) 
+
+SA <- bb_B1 + geom_point(data=gw_20_B_bb_20_P_pop_U, 
+                                           aes(x = abs(BudBreak2020_Plasticity), y = Height_Growth, color = Region, 
+                                               shape = Region), size=4, alpha = 0.25, 
+                                           inherit.aes = FALSE) 
+
+
+# budset 2019
+bs_B1 <- sjPlot::plot_model(gw_19_B_bs_19_P_pop_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity of bud set in 2019", y = "") + 
+                                theme_bw() + theme(axis.text=element_text(size=14), 
+                                                 axis.title=element_text(size=18),
+                                                 legend.position = "bottom",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) 
+
+SB <- bs_B1 + geom_point(data=gw_19_B_bs_19_P_pop_U, 
+                                           aes(x = abs(BudSet2019_Plasticity), y = Height_Growth, color = Region, 
+                                               shape = Region), size=4, alpha = 0.25, 
+                                           inherit.aes = FALSE) 
+
+
+# budset 2020  
+bs_D1 <- sjPlot::plot_model(gw_20_B_bs_20_P_pop_abs_mod, type = "int",  colors=reg_palette) +
+                                labs(x = "Plasticity of bud set in 2020", y = "") + 
+                                theme_bw() + theme(axis.text=element_text(size=14), 
+                                                 axis.title=element_text(size=18),
+                                                 legend.position = "bottom",
+                                                 plot.background = element_blank(),
+                                                 panel.grid.major = element_blank(),
+                                                 panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(),
+                                                 plot.title = element_blank()) 
+
+SC <- bs_D1 + geom_point(data=gw_20_B_bs_20_P_pop_U, 
+                                           aes(x = abs(BudSet2020_Plasticity), y = Height_Growth, color = Region, 
+                                               shape = Region), size=4, alpha = 0.25, 
+                                           inherit.aes = FALSE) 
+
+
+
+SF_grid <- cowplot::plot_grid( SA + theme(legend.position="none"),
+                       SB + theme(legend.position="none"),
+                       SC + theme(legend.position="none"),
+                       align = 'h',
+                       labels = c("A", "B", "C"),
+                       hjust = -1,
+                       nrow = 1
+                       )
+  
+
+# final 
+cowplot::plot_grid(SF_grid+ theme(legend.position="none"), legend_tmp, ncol = 2, rel_widths = c(1,.09))
+```
+
+
+
+
 

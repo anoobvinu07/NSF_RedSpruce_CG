@@ -1,0 +1,2023 @@
+---
+title: "NSF Budset 2020"
+author: "Anoob Prakash"
+date: "24/10/2020"
+output:
+  rmarkdown::html_document:
+    theme: cosmo  
+    number_sections: false
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: console
+---
+
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Packages   
+```{r}
+### Packages
+require(tidyverse)
+require(plyr) # for join_all function
+require(data.table) # for fread function
+require(lubridate) # for modifying dates
+require(zoo) # for na.locf function
+
+### Loading Metadata
+meta <- read.table("C:/Dropbox/Spruce_CommonGarden_Data/Meta/LocationMetaData.txt", header=T, sep="\t")
+
+
+```
+
+
+
+
+# VT garden {.tabset .tabset-fade .tabset-pills}  
+
+## Trait data  
+
+```{r}
+## garden map
+VT_gar <- read_csv("C:/Dropbox/Spruce_CommonGarden_Data/VT_site/VT_garden.csv")
+
+## plant ID frame 
+VT_frame <- VT_gar[,c("PlantOrder", "plant_ID")]
+
+
+## VT files
+VT_files <- list.files(path = "C:/Dropbox/Spruce_CommonGarden_Data/VT_site/VT_traitdataRAW/budset_2020", full.names = TRUE)
+
+## Convert timestamp to date
+VT_comb_files <- bind_rows(lapply(VT_files, fread)) %>% 
+              mutate(day = as.Date(timestamp))
+
+# Convert date to julian days
+VT_comb_files$JulianDay <- format(VT_comb_files$day, "%j")
+
+# budset
+levels(as.factor(VT_comb_files$trait)) # check for different spellings
+VT_Budset <- VT_comb_files %>% filter(trait == "Budset")
+VT_BudSet <- VT_comb_files %>% filter(trait == "BudSet")
+
+VT_budset <- rbind(VT_Budset, VT_BudSet)
+
+# check levels of the values
+levels(as.factor(VT_budset$value))
+
+# convert Bud_set and true to 1
+VT_budset[VT_budset$value == "Bud_Set", "value"] <- 1
+VT_budset[VT_budset$value == "true", "value"] <- 1
+
+# convert Not_set and false to 0
+VT_budset[VT_budset$value == "Not_Set", "value"] <- 0
+VT_budset[VT_budset$value == "false", "value"] <- 0
+
+# extract unique values
+VT_budset <- VT_budset[,c("plant_ID", "JulianDay","value")]
+VT_budset <- unique(VT_budset)
+
+VT_budset <- VT_budset %>% pivot_wider(names_from = JulianDay, values_from = value)
+
+# VT_budset$JulianDay <- as.numeric(VT_budset$JulianDay)
+
+# sort column order
+VT_order <- sort(names(VT_budset))
+length(VT_order)
+VT_order <- VT_order[-length(VT_order)] # remove plant_ID
+VT_order
+VT_budset <- VT_budset[,c("plant_ID", "188", "192", "194", "196", "199", "202", "206", "212", 
+                          "219", "225", "232", "241", "246", "253", "260", "267", "275","282","288")]
+
+# change char to numeric
+VT_budset[,c(2:length(VT_budset))] <- as.data.frame(sapply(VT_budset[,c(2:length(VT_budset))], as.numeric))
+
+# use na.locf to replace the NAs with previous value
+# require(zoo) # for na.locf function
+# this function fills in the NAs within a column using the values of the previous non NA
+# values from a preeciding row
+# however this function only works on columns, so transponse (t) the dataframe to apply the function
+# then use apply() to apply the na.locf to all the rows
+VT_budset <- as_tibble(t(apply(VT_budset, 1, zoo::na.locf)))
+
+# change char to numeric again
+VT_budset[,c(2:length(VT_budset))] <- as.data.frame(lapply(VT_budset[,c(2:length(VT_budset))],
+                                                           as.numeric))
+
+# VT wide format - reset point
+VT_budset_wide <- VT_budset
+VT_budset <- VT_budset_wide
+```
+
+Subset data based on NA values     
+```{r}
+# no NA subset
+VT_budset_part1 <- VT_budset_wide[!is.na(VT_budset_wide$`188`),] 
+VT_budset_part1 <- VT_budset_part1[,colSums(is.na(VT_budset_part1))==0] # remove cols with NA
+VT_budset_part1 <- VT_budset_part1[!(VT_budset_part1$`288`==0),] # remove plants without budset values
+
+# day 188 NA subset
+VT_budset_part2 <- VT_budset_wide[is.na(VT_budset_wide$`188`) & !is.na(VT_budset_wide$`212`),]
+VT_budset_part2 <- VT_budset_part2[,colSums(is.na(VT_budset_part2))==0]
+VT_budset_part2 <- VT_budset_part2[!(VT_budset_part2$`288`==0),]
+
+# day 212 NA subset
+VT_budset_part3 <- VT_budset_wide[is.na(VT_budset_wide$`212`),]
+VT_budset_part3 <- VT_budset_part3[,colSums(is.na(VT_budset_part3))==0]
+VT_budset_part3 <- VT_budset_part3[!(VT_budset_part3$`288`==0),]
+```
+
+Remove excess ones and zeros
+```{r eval=FALSE}
+# part 1
+head(VT_budset_part1)
+length(VT_budset_part1) # max col length is 20
+## replace all the NAs with zero
+# VT_budset_part1[VT_budset_part1=="NA"]
+# VT_budset_part1[is.na(VT_budset_part1)] <- 0
+
+for(row in 1:nrow(VT_budset_part1)){
+  
+  for(col in 2:18){
+    
+    ## if condition to skip single zeros in the data
+    if(VT_budset_part1[row,col] < VT_budset_part1[row,col-1] && VT_budset_part1[row,col] < VT_budset_part1[row,col+1]){
+      
+      VT_budset_part1[row,col] <- VT_budset_part1[row,col+1]
+    }
+    
+    ## if condition to reset the preceeding values based on the future trend
+    if(VT_budset_part1[row,col] < VT_budset_part1[row,col+1] && VT_budset_part1[row,col] < VT_budset_part1[row,col+2]){
+      
+      VT_budset_part1[row,c(2:col)] <- 0
+    } #else {VT_budset_part1[row,col] <- VT_budset_part1[row,col]}
+  }
+  
+  
+}
+
+
+### testing
+X30 <- VT_budset_part1
+# MMF_24_VT_E
+# RP_05_VT_E - works here
+
+# part 2
+head(VT_budset_part2)
+length(VT_budset_part2) # max col length is 13
+
+for(row in 1:nrow(VT_budset_part2)){
+  
+  for(col in 2:11){
+    
+    ## if condition to skip single zeros in the data
+    if(VT_budset_part2[row,col] < VT_budset_part2[row,col-1] && VT_budset_part2[row,col] < VT_budset_part2[row,col+1]){
+      
+      VT_budset_part2[row,col] <- VT_budset_part2[row,col+1]
+    }
+    
+    ## if condition to reset the preceeding values based on the future trend
+    if(VT_budset_part2[row,col] < VT_budset_part2[row,col+1] && VT_budset_part2[row,col] < VT_budset_part2[row,col+2]){
+      
+      VT_budset_part2[row,c(2:col)] <- 0
+    } 
+  }
+  
+  
+}
+
+# part 3
+head(VT_budset_part3)
+length(VT_budset_part3) # max col length is 11
+
+for(row in 1:nrow(VT_budset_part3)){
+  
+  for(col in 2:9){
+    
+    ## if condition to skip single zeros in the data
+    if(VT_budset_part3[row,col] < VT_budset_part3[row,col-1] && VT_budset_part3[row,col] < VT_budset_part3[row,col+1]){
+      
+      VT_budset_part3[row,col] <- VT_budset_part3[row,col+1]
+    }
+    
+    ## if condition to reset the preceeding values based on the future trend
+    if(VT_budset_part3[row,col] < VT_budset_part3[row,col+1] && VT_budset_part3[row,col] < VT_budset_part3[row,col+2]){
+      
+      VT_budset_part3[row,c(2:col)] <- 0
+    } 
+  }
+  
+  
+}
+
+```
+
+Long format
+```{r}
+# convert to long format for modelling
+
+## part 1
+names(VT_budset_part1) # to check the days
+VT_budset_part1 <- VT_budset_part1 %>% tidyr::pivot_longer(cols=c("188":"288"),
+                                                           names_to = "JDays",
+                                                           values_to = "budset_state")
+VT_budset_part1$JDays <- as.numeric(VT_budset_part1$JDays)
+VT_budset_part1$plant_ID <- as.factor(VT_budset_part1$plant_ID)
+# VT_budset_part1$JDays <- as.factor(VT_budset_part1$JDays)
+
+## part 2
+names(VT_budset_part2) # to check the days
+VT_budset_part2 <- VT_budset_part2 %>% tidyr::pivot_longer(cols=c("212":"288"),
+                                                           names_to = "JDays",
+                                                           values_to = "budset_state")
+VT_budset_part2$JDays <- as.numeric(VT_budset_part2$JDays)
+VT_budset_part2$plant_ID <- as.factor(VT_budset_part2$plant_ID)
+# VT_budset_part2$JDays <- as.factor(VT_budset_part2$JDays)
+
+## part 3
+names(VT_budset_part3) # to check the days
+VT_budset_part3 <- VT_budset_part3 %>% tidyr::pivot_longer(cols=c("225":"288"),
+                                                           names_to = "JDays",
+                                                           values_to = "budset_state")
+VT_budset_part3$JDays <- as.numeric(VT_budset_part3$JDays)
+VT_budset_part3$plant_ID <- as.factor(VT_budset_part3$plant_ID)
+
+## Combine all files
+VT <- rbind(VT_budset_part1,VT_budset_part2,VT_budset_part3)
+VT <- VT[!is.na(VT$budset_state),] # another check for NAs 
+```
+
+```{r}
+## write files to reduce code run time in the future
+
+# write.csv(VT,"C:\\Dropbox\\UVM\\Research\\Code\\CommonGardenTraits\\2020\\VT_budset_longformat_afterForLoop.csv")
+
+VT <- read.csv("C:\\Dropbox\\UVM\\Research\\Code\\CommonGardenTraits\\2020\\VT_budset_longformat_afterForLoop.csv", header=T, sep=",")
+VT <- VT[,-1]
+```
+
+
+## Reflushes    
+```{r}
+VT_Reflush <- VT_comb_files %>% filter(trait == "Reflush")
+
+# extract unique values
+VT_Reflush <- VT_Reflush[,c("plant_ID", "JulianDay","value")]
+VT_Reflush <- unique(VT_Reflush)
+
+VT_Reflush <- VT_Reflush %>% pivot_wider(names_from = JulianDay, values_from = value)
+
+# sort column order
+VT_order <- sort(names(VT_Reflush))
+length(VT_order)
+VT_order <- VT_order[-length(VT_order)] # remove plant_ID
+VT_order
+VT_Reflush <- VT_Reflush[,c("plant_ID", "192", "201", "202", "206", "212", "219",
+                            "225", "232", "241", "246", "253", "260")]
+
+# change char to numeric
+VT_Reflush[,c(2:length(VT_Reflush))] <- as.data.frame(sapply(VT_Reflush[,c(2:length(VT_Reflush))], as.numeric))
+
+# convert to long format for modelling
+names(VT_Reflush) # to check the days
+VT_Reflush <- VT_Reflush %>% tidyr::pivot_longer(cols=c("192":"260"),
+                                             names_to = "JDays",
+                                             values_to = "reflush")
+VT_Reflush$JDays <- as.numeric(VT_Reflush$JDays)
+VT_Reflush$plant_ID <- as.factor(VT_Reflush$plant_ID)
+
+VT_RF <- VT_Reflush[,c("plant_ID","reflush")]
+VT_RF <- VT_RF[!is.na(VT_RF$reflush),]
+VT_RF <- unique(VT_RF) # 160 unique reflush events
+VT_RF <- as.data.frame(VT_RF)
+# VT_RF is the final file for the reflush data
+
+```
+
+**Correct the budset data with the infusion of reflush trait - skipped**    
+```{r eval=FALSE}
+VT_final <- VT
+
+VT_RF_subset <-VT_final[VT_final$plant_ID %in% VT_RF$plant_ID,] 
+
+
+VT_RF_subset <- na.omit(VT_RF_subset)
+VT_RF_subset <- merge(x=VT_RF_subset,y=VT_RF,all.x=TRUE, by="plant_ID") # attaching the reflush data
+
+# changing budset values based on reflush date
+for(i in 1:nrow(VT_RF_subset)){
+  if(VT_RF_subset[i,"JDays"] < VT_RF_subset[i,"reflush"]){
+  VT_RF_subset[i,"budset_state"] <- 0
+  }
+}
+
+VT_part1 <- VT_final[!VT_final$plant_ID %in% VT_RF$plant_ID,]
+
+VT <- rbind(VT_part1,VT_RF_subset[,-4])
+
+
+```
+
+```{r eval = FALSE}
+####################### attach meta data ######################################
+### Loading Metadata
+meta <- read.table("C:/Dropbox/Spruce_CommonGarden_Data/Meta/LocationMetaData.txt", header=T, sep="\t")
+
+VT <- merge(VT_gar, x=VT, all.x = TRUE, by="plant_ID")
+
+VT <- merge(VT,meta)
+
+VT <- VT %>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
+
+VT <- VT[,c("plant_ID","Population","Family","Garden","mBed","Region","JDays","budset_state")]
+
+VT$JDays <- as.numeric(VT$JDays)
+
+# convert to factors
+VT[,c("plant_ID","Population","Family","Garden","mBed")] <- lapply(VT[,c("plant_ID","Population","Family","Garden","mBed")], factor)
+
+VT <- VT[!is.na(VT$budset_state),]
+```
+
+## GLM to estimate budset date       
+Based on this page: http://randomproblemsicomeacross.blogspot.com/2013/04/finding-inflection-point-in-logistic.html  
+```{r warning=FALSE}
+# for binomial data
+p = 0.5
+
+VT_df <- NULL
+
+for(i in levels(VT$plant_ID)){
+  
+  VT_tmp_model <- glm(budset_state ~ JDays, family="binomial",data=VT[VT$plant_ID==i,])
+  
+  VT_df = rbind(VT_df,c(i,coef(VT_tmp_model[1]),
+                        (log(p/(1-p)) - coef(VT_tmp_model)[1]) / coef(VT_tmp_model)[2]))
+}
+
+# dataframe for VT based on plant ID model 1
+
+VT_budset_plantID <- as.data.frame(VT_df[,c(-2,-3)])
+VT_budset_plantID <- as_tibble(VT_budset_plantID)
+
+
+colnames(VT_budset_plantID) <- c("plant_ID","JDays")
+VT_budset_plantID$JDays <- as.numeric(as.character(VT_budset_plantID$JDays))
+
+VT_budset_plantID <- VT_budset_plantID[VT_budset_plantID$JDays>187,] 
+VT_budset_plantID <- VT_budset_plantID[VT_budset_plantID$JDays<289,]
+hist(x=VT_budset_plantID$JDays)
+
+
+# for non binomial data
+VT_df2 <- NULL
+
+for(i in levels(VT$plant_ID)){
+  
+  if (sum(VT[VT$plant_ID==i,"budset_state"]) == nrow(VT[VT$plant_ID==i,])){ ## checking if all the values are one
+    plant_ID <- i
+    JDays <- min(VT[VT$plant_ID==i,"JDays"])
+    VT_temp <- cbind(plant_ID,JDays)
+    VT_df2 <- rbind(VT_df2, VT_temp)
+  }
+}
+
+VT_df2 <- as.data.frame(VT_df2)
+VT_df2$JDays <- as.numeric(as.character(VT_df2$JDays))
+hist(x=VT_df2$JDays)
+
+## Combine the dataset
+VT_budset <- rbind(VT_budset_plantID,VT_df2)
+VT_budset$plant_ID <- as.factor(VT_budset$plant_ID)
+
+
+VT_budset <- merge(VT_budset,VT_gar,by="plant_ID")
+VT_budset <- merge(VT_budset,meta,by="Family")
+colnames(VT_budset)[colnames(VT_budset)=="JDays"] <- "BudSet"
+VT_budset$BudSet <- round(VT_budset$BudSet)
+```
+
+## Mortality and No terminal buds   
+```{r}
+######################### Mortality data ######################################
+mort_VT <- read.csv("C:\\Dropbox\\Spruce_CommonGarden_Data\\VT_site\\VT_traitdataRAW\\plantArchitectureANDmortality\\2020-10-25-05-45-43_vt_garden_AP_SD_table.csv", header=TRUE)
+
+mort_VT$Survival <- trimws(mort_VT$Survival) # remove leading and trailing spaces
+mort_VT <- mort_VT %>% filter(mort_VT$Survival == "Dead")
+# CR_06_VT_D <-- check 
+mort_VT <- mort_VT[,c("plant_ID","Survival")]
+
+## Remove the dead from the budset data  
+VT_budset <- VT_budset[!(VT_budset$plant_ID %in% mort_VT$plant_ID),]
+
+######################### Missing/Dead terminal buds ######################################
+noTerminal_VT <- read.csv("C:\\Dropbox\\Spruce_CommonGarden_Data\\VT_site\\VT_traitdataRAW\\budset_commented_2020\\no_terminal_buds.csv",header = TRUE)
+noTerminal_VT <- noTerminal_VT[,c("plant_ID","value")]
+
+## Remove the missing/dead terminals from the budset data  
+VT_budset <- VT_budset[!(VT_budset$plant_ID %in% noTerminal_VT$plant_ID),]
+```
+
+```{r}
+### Output for VT
+
+# write.csv(VT_budset[,c("plant_ID","Family","Population","Location","Region","Latitude","Longitude","Elevation","Garden","Bed","BedRow","BedCol","Rack","RackRow","RackCol","BudSet")], "C:/Dropbox/Spruce_CommonGarden_Data/VT_site/VT_traitdataQCd/VT_BudSet_2020.csv", row.names=F, quote=F)
+```
+
+
+# MD Garden  {.tabset .tabset-fade .tabset-pills}  
+ 
+## Trait data   
+```{r}
+## garden map
+MD_gar <- read_csv("C:\\Dropbox\\Spruce_CommonGarden_Data\\MD_site\\MD_garden.csv")
+
+## plant ID frame 
+MD_frame <- MD_gar[,c("PlantOrder", "plant_ID")]
+
+
+############## read in database files #########################################
+MD_files <- list.files(path = "C:\\Dropbox\\Spruce_CommonGarden_Data\\MD_site\\MD_traitdataRAW\\budset_2020\\database", full.names = TRUE)
+
+## Convert timestamp to date
+MD_comb_files <- bind_rows(lapply(MD_files, fread)) %>% 
+              mutate(day = as.Date(timestamp))
+
+MD_comb_files <- MD_comb_files[,c("plant_ID", "Population","Family","Garden","Bed","trait","value","day")]
+```
+
+**Table.csv excluded from analysis for now**   
+```{r eval = FALSE}
+############# read in table files #############################################
+
+# MD_table_csv <- list.files(path = "C:\\Dropbox\\Spruce_CommonGarden_Data\\MD_site\\MD_traitdataRAW\\budset_2020\\table", full.names = TRUE) %>% 
+#   lapply(read_csv) %>%
+#   join_all(by = c("plant_ID", "BudSet"), type = "full")
+# 
+# MD_table_csv$BudSet <- as.character(MD_table_csv$BudSet)
+# MD_table_csv$BudSet_notes <- as.character(MD_table_csv$BudSet_notes)
+# MD_table_csv$Reflush <- as.character(MD_table_csv$Reflush)
+# 
+# MD_table_csv <- MD_table_csv %>% tidyr::pivot_longer(BudSet:BudSet_notes,
+#                                                 names_to = "trait",
+#                                                values_to = "value")
+# ## Convert timestamp to date
+# MD_table_csv <- MD_table_csv %>% 
+#               mutate(day = as.Date(timestamp))
+# 
+# MD_table_csv <- MD_table_csv[,c("plant_ID", "Population","Family","Garden","Bed","trait","value","day")]
+# 
+# ## combine files with rbind  
+# MD_comb_files <- rbind(MD_comb_files, MD_table_csv)
+```
+
+
+```{r}
+MD_comb_files <- MD_comb_files[Population!="FILLER",]
+
+###################################################reset point
+# MD_reset <- MD_comb_files
+# MD_comb_files <- MD_reset
+
+# Convert date to julian days
+MD_comb_files$JulianDay <- format(MD_comb_files$day, "%j")
+
+# budset
+levels(as.factor(MD_comb_files$trait)) # check for different spellings
+MD_budset <- MD_comb_files %>% filter(trait == "BudSet")
+
+# check levels of the values
+levels(as.factor(MD_budset$value))
+MD_budset <- MD_budset[!is.na(MD_budset$value),]
+
+# convert TRUE and true to 1
+MD_budset[MD_budset$value == "TRUE", "value"] <- 1
+MD_budset[MD_budset$value == "true", "value"] <- 1
+
+# convert FALSE and false to 0
+MD_budset[MD_budset$value == "FALSE", "value"] <- 0
+MD_budset[MD_budset$value == "false", "value"] <- 0
+
+# extract unique values
+MD_budset <- MD_budset[,c("plant_ID", "JulianDay","value")]
+MD_budset$value <- as.numeric(MD_budset$value)
+# MD_budset <- MD_budset[!is.na(MD_budset$value),]
+MD_budset <- na.omit(MD_budset)
+
+
+MD_budset$JulianDay <- as.character(MD_budset$JulianDay)
+MD_budset$value <- as.character(MD_budset$value)
+MD_budset$plant_ID <- as.character(MD_budset$plant_ID)
+
+MD_budset <- distinct(MD_budset)
+
+MD_budset <- MD_budset %>% 
+              pivot_wider(.,names_from = JulianDay, values_from = value) 
+
+
+
+# sort column order
+MD_order <- sort(names(MD_budset))
+length(MD_order)
+MD_order <- MD_order[-length(MD_order)] # remove plant_ID
+MD_order
+MD_budset <- MD_budset[,c("plant_ID", 
+                          "197", "198", "199", "201", "202", "203", "204", "205", "206", "208", "209", 
+                          "210", "211", "213", "215", "216", "217", "218", 
+                          "220", "223", "224", "225", "231", "233", "236", "237", "238", "239", "240",
+                          "241", "245", "246", "250", "253", "257", "268", "290")]
+
+# change char to numeric
+MD_budset[,c(2:length(MD_budset))] <- as.data.frame(sapply(MD_budset[,c(2:length(MD_budset))], as.numeric))
+
+# use na.locf to replace the NAs with previous value
+# require(zoo) # for na.locf function
+# this function fills in the NAs within a column using the values of the previous non NA
+# values from a preeciding row
+# however this function only works on columns, so transponse (t) the dataframe to apply the function
+# then use apply() to apply the na.locf to all the rows
+MD_budset <- as_tibble(t(apply(MD_budset, 1, zoo::na.locf)))
+
+# change char to numeric again
+MD_budset[,c(2:length(MD_budset))] <- as.data.frame(lapply(MD_budset[,c(2:length(MD_budset))],
+                                                           as.numeric))
+
+# VT wide format - reset point
+MD_budset_wide <- MD_budset
+MD_budset      <- MD_budset_wide
+
+
+
+```
+
+Subset data based on NA values     
+```{r}
+# no NA subset
+MD_budset_part1 <- MD_budset_wide[!is.na(MD_budset_wide$`197`),] 
+MD_budset_part1 <- MD_budset_part1[,colSums(is.na(MD_budset_part1))==0] # remove cols with NA
+MD_budset_part1 <- MD_budset_part1[!(MD_budset_part1$`290`==0),] # remove plants without budset values
+
+# day 197 NA subset
+MD_budset_part2 <- MD_budset_wide[is.na(MD_budset_wide$`197`) & !is.na(MD_budset_wide$`198`),]
+MD_budset_part2 <- MD_budset_part2[,colSums(is.na(MD_budset_part2))==0]
+MD_budset_part2 <- MD_budset_part2[!(MD_budset_part2$`290`==0),]
+
+# day 198 NA subset
+MD_budset_part3 <- MD_budset_wide[is.na(MD_budset_wide$`198`) & !is.na(MD_budset_wide$`199`),]
+MD_budset_part3 <- MD_budset_part3[,colSums(is.na(MD_budset_part3))==0]
+MD_budset_part3 <- MD_budset_part3[!(MD_budset_part3$`290`==0),]
+
+# day 199 NA subset
+MD_budset_part4 <- MD_budset_wide[is.na(MD_budset_wide$`199`) & !is.na(MD_budset_wide$`201`),]
+MD_budset_part4 <- MD_budset_part4[,colSums(is.na(MD_budset_part4))==0]
+MD_budset_part4 <- MD_budset_part4[!(MD_budset_part4$`290`==0),]
+
+# day 201 NA subset
+MD_budset_part5 <- MD_budset_wide[is.na(MD_budset_wide$`201`) & !is.na(MD_budset_wide$`202`),]
+MD_budset_part5 <- MD_budset_part5[,colSums(is.na(MD_budset_part5))==0]
+MD_budset_part5 <- MD_budset_part5[!(MD_budset_part5$`290`==0),]
+
+# day 202 NA subset
+MD_budset_part6 <- MD_budset_wide[is.na(MD_budset_wide$`202`) & !is.na(MD_budset_wide$`203`),]
+MD_budset_part6 <- MD_budset_part6[,colSums(is.na(MD_budset_part6))==0]
+MD_budset_part6 <- MD_budset_part6[!(MD_budset_part6$`290`==0),]
+
+# day 203 NA subset
+MD_budset_part7 <- MD_budset_wide[is.na(MD_budset_wide$`203`) & !is.na(MD_budset_wide$`204`),]
+MD_budset_part7 <- MD_budset_part7[,colSums(is.na(MD_budset_part7))==0]
+MD_budset_part7 <- MD_budset_part7[!(MD_budset_part7$`290`==0),]
+
+# day 204 NA subset
+MD_budset_part8 <- MD_budset_wide[is.na(MD_budset_wide$`204`) & !is.na(MD_budset_wide$`205`),]
+MD_budset_part8 <- MD_budset_part8[,colSums(is.na(MD_budset_part8))==0]
+MD_budset_part8 <- MD_budset_part8[!(MD_budset_part8$`290`==0),]
+
+# day 205 NA subset
+MD_budset_part9 <- MD_budset_wide[is.na(MD_budset_wide$`205`) & !is.na(MD_budset_wide$`206`),]
+MD_budset_part9 <- MD_budset_part9[,colSums(is.na(MD_budset_part9))==0]
+MD_budset_part9 <- MD_budset_part9[!(MD_budset_part9$`290`==0),]
+
+# day 206 NA subset
+MD_budset_part10 <- MD_budset_wide[is.na(MD_budset_wide$`206`),]
+MD_budset_part10 <- MD_budset_part10[,colSums(is.na(MD_budset_part10))==0]
+MD_budset_part10 <- MD_budset_part10[!(MD_budset_part10$`290`==0),]
+```
+
+Remove excess ones and zeros
+```{r eval=FALSE}
+# part 1
+head(MD_budset_part1)
+length(MD_budset_part1) # max col length is 38
+## replace all the NAs with zero
+# MD_budset_part1[MD_budset_part1=="NA"]
+# MD_budset_part1[is.na(MD_budset_part1)] <- 0
+
+for(row in 1:nrow(MD_budset_part1)){
+  
+  for(col in 2:36){
+    
+    ## if condition to skip single zeros in the data
+    if(MD_budset_part1[row,col] < MD_budset_part1[row,col-1] && MD_budset_part1[row,col] < MD_budset_part1[row,col+1]){
+      
+      MD_budset_part1[row,col] <- MD_budset_part1[row,col+1]
+    }
+    
+    ## if condition to reset the preceeding values based on the future trend
+    if(MD_budset_part1[row,col] < MD_budset_part1[row,col+1] && MD_budset_part1[row,col] < MD_budset_part1[row,col+2]){
+      
+      MD_budset_part1[row,c(2:col)] <- 0
+    } #else {MD_budset_part1[row,col] <- MD_budset_part1[row,col]}
+  }
+  
+  
+}
+
+
+# part 2
+head(MD_budset_part2)
+length(MD_budset_part2) # max col length is 37
+
+for(row in 1:nrow(MD_budset_part2)){
+  
+  for(col in 2:35){
+    
+    ## if condition to skip single zeros in the data
+    if(MD_budset_part2[row,col] < MD_budset_part2[row,col-1] && MD_budset_part2[row,col] < MD_budset_part2[row,col+1]){
+      
+      MD_budset_part2[row,col] <- MD_budset_part2[row,col+1]
+    }
+    
+    ## if condition to reset the preceeding values based on the future trend
+    if(MD_budset_part2[row,col] < MD_budset_part2[row,col+1] && MD_budset_part2[row,col] < MD_budset_part2[row,col+2]){
+      
+      MD_budset_part2[row,c(2:col)] <- 0
+    } 
+  }
+  
+  
+}
+
+# part 3
+head(MD_budset_part3)
+length(MD_budset_part3) # max col length is 36
+
+for(row in 1:nrow(MD_budset_part3)){
+  
+  for(col in 2:34){
+    
+    ## if condition to skip single zeros in the data
+    if(MD_budset_part3[row,col] < MD_budset_part3[row,col-1] && MD_budset_part3[row,col] < MD_budset_part3[row,col+1]){
+      
+      MD_budset_part3[row,col] <- MD_budset_part3[row,col+1]
+    }
+    
+    ## if condition to reset the preceeding values based on the future trend
+    if(MD_budset_part3[row,col] < MD_budset_part3[row,col+1] && MD_budset_part3[row,col] < MD_budset_part3[row,col+2]){
+      
+      MD_budset_part3[row,c(2:col)] <- 0
+    } 
+  }
+  
+  
+}
+
+
+# part 4
+head(MD_budset_part4)
+length(MD_budset_part4) # max col length is 35
+
+for(row in 1:nrow(MD_budset_part4)){
+  
+  for(col in 2:33){
+    
+    ## if condition to skip single zeros in the data
+    if(MD_budset_part4[row,col] < MD_budset_part4[row,col-1] && MD_budset_part4[row,col] < MD_budset_part4[row,col+1]){
+      
+      MD_budset_part4[row,col] <- MD_budset_part4[row,col+1]
+    }
+    
+    ## if condition to reset the preceeding values based on the future trend
+    if(MD_budset_part4[row,col] < MD_budset_part4[row,col+1] && MD_budset_part4[row,col] < MD_budset_part4[row,col+2]){
+      
+      MD_budset_part4[row,c(2:col)] <- 0
+    } 
+  }
+}
+
+# part 5
+head(MD_budset_part5)
+length(MD_budset_part5) # max col length is 34
+
+for(row in 1:nrow(MD_budset_part5)){
+  
+  for(col in 2:32){
+    
+    ## if condition to skip single zeros in the data
+    if(MD_budset_part5[row,col] < MD_budset_part5[row,col-1] && MD_budset_part5[row,col] < MD_budset_part5[row,col+1]){
+      
+      MD_budset_part5[row,col] <- MD_budset_part5[row,col+1]
+    }
+    
+    ## if condition to reset the preceeding values based on the future trend
+    if(MD_budset_part5[row,col] < MD_budset_part5[row,col+1] && MD_budset_part5[row,col] < MD_budset_part5[row,col+2]){
+      
+      MD_budset_part5[row,c(2:col)] <- 0
+    } 
+  }
+}
+
+# part 6
+head(MD_budset_part6)
+length(MD_budset_part6) # max col length is 33
+
+for(row in 1:nrow(MD_budset_part6)){
+  
+  for(col in 2:31){
+    
+    ## if condition to skip single zeros in the data
+    if(MD_budset_part6[row,col] < MD_budset_part6[row,col-1] && MD_budset_part6[row,col] < MD_budset_part6[row,col+1]){
+      
+      MD_budset_part6[row,col] <- MD_budset_part6[row,col+1]
+    }
+    
+    ## if condition to reset the preceeding values based on the future trend
+    if(MD_budset_part6[row,col] < MD_budset_part6[row,col+1] && MD_budset_part6[row,col] < MD_budset_part6[row,col+2]){
+      
+      MD_budset_part6[row,c(2:col)] <- 0
+    } 
+  }
+}
+
+# part 7
+head(MD_budset_part7)
+length(MD_budset_part7) # max col length is 32
+
+for(row in 1:nrow(MD_budset_part7)){
+  
+  for(col in 2:30){
+    
+    ## if condition to skip single zeros in the data
+    if(MD_budset_part7[row,col] < MD_budset_part7[row,col-1] && MD_budset_part7[row,col] < MD_budset_part7[row,col+1]){
+      
+      MD_budset_part7[row,col] <- MD_budset_part7[row,col+1]
+    }
+    
+    ## if condition to reset the preceeding values based on the future trend
+    if(MD_budset_part7[row,col] < MD_budset_part7[row,col+1] && MD_budset_part7[row,col] < MD_budset_part7[row,col+2]){
+      
+      MD_budset_part7[row,c(2:col)] <- 0
+    } 
+  }
+}
+
+# part 8
+head(MD_budset_part8)
+length(MD_budset_part8) # max col length is 31
+
+for(row in 1:nrow(MD_budset_part8)){
+  
+  for(col in 2:29){
+    
+    ## if condition to skip single zeros in the data
+    if(MD_budset_part8[row,col] < MD_budset_part8[row,col-1] && MD_budset_part8[row,col] < MD_budset_part8[row,col+1]){
+      
+      MD_budset_part8[row,col] <- MD_budset_part8[row,col+1]
+    }
+    
+    ## if condition to reset the preceeding values based on the future trend
+    if(MD_budset_part8[row,col] < MD_budset_part8[row,col+1] && MD_budset_part8[row,col] < MD_budset_part8[row,col+2]){
+      
+      MD_budset_part8[row,c(2:col)] <- 0
+    } 
+  }
+}
+
+# part 9
+head(MD_budset_part9)
+length(MD_budset_part9) # max col length is 30
+
+for(row in 1:nrow(MD_budset_part9)){
+  
+  for(col in 2:28){
+    
+    ## if condition to skip single zeros in the data
+    if(MD_budset_part9[row,col] < MD_budset_part9[row,col-1] && MD_budset_part9[row,col] < MD_budset_part9[row,col+1]){
+      
+      MD_budset_part9[row,col] <- MD_budset_part9[row,col+1]
+    }
+    
+    ## if condition to reset the preceeding values based on the future trend
+    if(MD_budset_part9[row,col] < MD_budset_part9[row,col+1] && MD_budset_part9[row,col] < MD_budset_part9[row,col+2]){
+      
+      MD_budset_part9[row,c(2:col)] <- 0
+    } 
+  }
+}
+
+# part 10
+head(MD_budset_part10)
+length(MD_budset_part10) # max col length is 29
+
+for(row in 1:nrow(MD_budset_part10)){
+  
+  for(col in 2:27){
+    
+    ## if condition to skip single zeros in the data
+    if(MD_budset_part10[row,col] < MD_budset_part10[row,col-1] && MD_budset_part10[row,col] < MD_budset_part10[row,col+1]){
+      
+      MD_budset_part10[row,col] <- MD_budset_part10[row,col+1]
+    }
+    
+    ## if condition to reset the preceeding values based on the future trend
+    if(MD_budset_part10[row,col] < MD_budset_part10[row,col+1] && MD_budset_part10[row,col] < MD_budset_part10[row,col+2]){
+      
+      MD_budset_part10[row,c(2:col)] <- 0
+    } 
+  }
+}
+```
+
+Long format
+```{r}
+# convert to long format for modelling
+
+## part 1
+names(MD_budset_part1) # to check the days
+MD_budset_part1 <- MD_budset_part1 %>% tidyr::pivot_longer(cols=c("197":"290"),
+                                                           names_to = "JDays",
+                                                           values_to = "budset_state")
+MD_budset_part1$JDays <- as.numeric(MD_budset_part1$JDays)
+MD_budset_part1$plant_ID <- as.factor(MD_budset_part1$plant_ID)
+# MD_budset_part1$JDays <- as.factor(MD_budset_part1$JDays)
+
+## part 2
+names(MD_budset_part2) # to check the days
+MD_budset_part2 <- MD_budset_part2 %>% tidyr::pivot_longer(cols=c("198":"290"),
+                                                           names_to = "JDays",
+                                                           values_to = "budset_state")
+MD_budset_part2$JDays <- as.numeric(MD_budset_part2$JDays)
+MD_budset_part2$plant_ID <- as.factor(MD_budset_part2$plant_ID)
+# MD_budset_part2$JDays <- as.factor(MD_budset_part2$JDays)
+
+## part 3
+names(MD_budset_part3) # to check the days
+MD_budset_part3 <- MD_budset_part3 %>% tidyr::pivot_longer(cols=c("199":"290"),
+                                                           names_to = "JDays",
+                                                           values_to = "budset_state")
+MD_budset_part3$JDays <- as.numeric(MD_budset_part3$JDays)
+MD_budset_part3$plant_ID <- as.factor(MD_budset_part3$plant_ID)
+
+## part 4
+names(MD_budset_part4) # to check the days
+MD_budset_part4 <- MD_budset_part4 %>% tidyr::pivot_longer(cols=c("201":"290"),
+                                                           names_to = "JDays",
+                                                           values_to = "budset_state")
+MD_budset_part4$JDays <- as.numeric(MD_budset_part4$JDays)
+MD_budset_part4$plant_ID <- as.factor(MD_budset_part4$plant_ID)
+
+
+## part 5
+names(MD_budset_part5) # to check the days
+MD_budset_part5 <- MD_budset_part5 %>% tidyr::pivot_longer(cols=c("202":"290"),
+                                                           names_to = "JDays",
+                                                           values_to = "budset_state")
+MD_budset_part5$JDays <- as.numeric(MD_budset_part5$JDays)
+MD_budset_part5$plant_ID <- as.factor(MD_budset_part5$plant_ID)
+
+## part 6
+names(MD_budset_part6) # to check the days
+MD_budset_part6 <- MD_budset_part6 %>% tidyr::pivot_longer(cols=c("203":"290"),
+                                                           names_to = "JDays",
+                                                           values_to = "budset_state")
+MD_budset_part6$JDays <- as.numeric(MD_budset_part6$JDays)
+MD_budset_part6$plant_ID <- as.factor(MD_budset_part6$plant_ID)
+
+## part 7
+names(MD_budset_part7) # to check the days
+MD_budset_part7 <- MD_budset_part7 %>% tidyr::pivot_longer(cols=c("204":"290"),
+                                                           names_to = "JDays",
+                                                           values_to = "budset_state")
+MD_budset_part7$JDays <- as.numeric(MD_budset_part7$JDays)
+MD_budset_part7$plant_ID <- as.factor(MD_budset_part7$plant_ID)
+
+## part 8
+names(MD_budset_part8) # to check the days
+MD_budset_part8 <- MD_budset_part8 %>% tidyr::pivot_longer(cols=c("205":"290"),
+                                                           names_to = "JDays",
+                                                           values_to = "budset_state")
+MD_budset_part8$JDays <- as.numeric(MD_budset_part8$JDays)
+MD_budset_part8$plant_ID <- as.factor(MD_budset_part8$plant_ID)
+
+## part 9
+names(MD_budset_part9) # to check the days
+MD_budset_part9 <- MD_budset_part9 %>% tidyr::pivot_longer(cols=c("206":"290"),
+                                                           names_to = "JDays",
+                                                           values_to = "budset_state")
+MD_budset_part9$JDays <- as.numeric(MD_budset_part9$JDays)
+MD_budset_part9$plant_ID <- as.factor(MD_budset_part9$plant_ID)
+
+## part 10
+names(MD_budset_part10) # to check the days
+MD_budset_part10 <- MD_budset_part10 %>% tidyr::pivot_longer(cols=c("208":"290"),
+                                                           names_to = "JDays",
+                                                           values_to = "budset_state")
+MD_budset_part10$JDays <- as.numeric(MD_budset_part10$JDays)
+MD_budset_part10$plant_ID <- as.factor(MD_budset_part10$plant_ID)
+
+## Combine all files
+MD <- rbind(MD_budset_part1,MD_budset_part2,MD_budset_part3,MD_budset_part4,MD_budset_part5,MD_budset_part6,
+            MD_budset_part7,MD_budset_part8,MD_budset_part9,MD_budset_part10)
+MD <- MD[!is.na(MD$budset_state),] # another check for NAs
+```
+
+```{r}
+## write files to reduce code run time in the future  
+
+# write.csv(MD,"C:\\Dropbox\\UVM\\Research\\Code\\CommonGardenTraits\\2020\\MD_budset_longformat_afterForLoop.csv")
+
+MD <- read.csv("C:\\Dropbox\\UVM\\Research\\Code\\CommonGardenTraits\\2020\\MD_budset_longformat_afterForLoop.csv", header=T, sep=",")
+MD <- MD[,-1]
+MD$JDays <- as.numeric(MD$JDays)
+```
+
+## Mortality data  
+```{r}
+# ######################### Mortality data ######################################
+# mort_MD <- MD_comb_files %>% filter(MD_comb_files$trait == "Survival")
+# mort_MD$value <- trimws(mort_MD$value) # remove leading and trailing spaces
+# mort_MD <- mort_MD[,c("plant_ID","value")]
+# colnames(mort_MD)[2] <- "Survival"
+# mort_MD <- distinct(mort_MD)
+# mort_MD <- mort_MD %>% filter(mort_MD$Survival == "Dead")
+# 
+# ## Remove the dead from the budset data  
+# MD <- MD[!(MD$plant_ID %in% mort_MD$plant_ID),]
+```
+
+
+**Ignore excluding commented individuals for now - dated 14 Nov 2020**    
+```{r eval=FALSE}
+######################### Missing/Dead terminal buds ######################################
+# noTerminal_VT <- read.csv("C:\\Dropbox\\Spruce_CommonGarden_Data\\VT_site\\VT_traitdataRAW\\budset_commented_2020\\no_terminal_buds.csv",header = TRUE)
+# noTerminal_VT <- noTerminal_VT[,c("plant_ID","value")]
+
+## Remove the missing/dead terminals from the budset data  
+# VT <- VT[!(VT$plant_ID %in% noTerminal_VT$plant_ID),]
+```
+
+## Reflushes    
+```{r}
+MD_Reflush <- MD_comb_files %>% filter(trait == "Reflush")
+
+# extract unique values
+MD_Reflush <- MD_Reflush[,c("plant_ID", "value")]
+MD_Reflush <- unique(MD_Reflush)
+MD_Reflush <- MD_Reflush[!MD_Reflush$value=="NA",]
+
+MD_Reflush <- MD_Reflush %>% pivot_wider(names_from = value, values_from = value)
+
+# sort column order
+MD_order <- sort(names(MD_Reflush))
+length(MD_order)
+MD_order <- MD_order[-length(MD_order)] # remove plant_ID
+MD_order
+
+## Actual reflush data
+# MD_Reflush <- MD_Reflush[,c("plant_ID", "197", "199", "201", "202", "203", "204", "205", "206",
+#                             "208", "209", "210", "211", "213", "215", "216", "217", "218", "220",
+#                             "223", "224", "225", "231", "236", "237", "240")]
+
+## reduced reflush data
+### start from 204
+MD_Reflush <- MD_Reflush[,c("plant_ID", "204", "205", "206",
+                            "208", "209", "210", "211", "213", "215", "216", "217", "218", "220",
+                            "223", "224", "225", "231", "236", "237", "240")]
+
+# change char to numeric
+MD_Reflush[,c(2:length(MD_Reflush))] <- as.data.frame(sapply(MD_Reflush[,c(2:length(MD_Reflush))], as.numeric))
+
+# convert to long format for modelling
+names(MD_Reflush) # to check the days
+MD_Reflush <- MD_Reflush %>% tidyr::pivot_longer(cols=c("220":"240"),
+                                             names_to = "JDays",
+                                             values_to = "reflush")
+MD_Reflush$JDays <- as.numeric(MD_Reflush$JDays)
+MD_Reflush$plant_ID <- as.factor(MD_Reflush$plant_ID)
+MD_Reflush <- MD_Reflush[!is.na(MD_Reflush$reflush==T),]
+
+MD_RF <- MD_Reflush[,c("plant_ID","reflush")]
+MD_RF <- MD_RF[!is.na(MD_RF$reflush),]
+MD_RF <- unique(MD_RF) # 75 unique reflush events
+# MD_RF is the final file for the reflush data
+
+```
+
+**Correct the budset data with the infusion of reflush trait - skipped**    
+```{r eval=FALSE}
+MD_final <- MD
+
+MD_RF_subset <-MD_final[MD_final$plant_ID %in% MD_RF$plant_ID,]
+
+
+MD_RF_subset <- na.omit(MD_RF_subset)
+MD_RF_subset <- merge(x=MD_RF_subset,y=MD_RF,all.x=TRUE, by="plant_ID") # attaching the reflush data
+
+# changing budset values based on reflush date
+for(i in 1:nrow(MD_RF_subset)){
+  if(MD_RF_subset[i,"JDays"] < MD_RF_subset[i,"reflush"]){
+  MD_RF_subset[i,"budset_state"] <- 0
+  }else{MD_RF_subset[i,"budset_state"] <- 1}
+}
+
+MD_part1 <- MD_final[!MD_final$plant_ID %in% MD_RF$plant_ID,]
+
+MD <- rbind(MD_part1,MD_RF_subset[,-4])
+
+```
+
+```{r eval = F}
+####################### attach meta data ######################################
+### Loading Metadata
+# meta <- read.table("C:/Dropbox/Spruce_CommonGarden_Data/Meta/LocationMetaData.txt", header=T, sep="\t")
+# 
+# MD <- merge(MD_gar, MD, all.x = TRUE, by="plant_ID")
+# 
+# MD <- merge(MD,meta)
+# 
+# MD <- MD %>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
+# 
+# MD <- MD[,c("plant_ID","Population","Family","Garden","mBed","Region","JDays","budset_state")]
+# 
+# MD$JDays <- as.numeric(MD$JDays)
+# 
+# # convert to factors
+# MD[,c("plant_ID","Population","Family","Garden","mBed")] <- lapply(MD[,c("plant_ID","Population","Family","Garden","mBed")], factor)
+# MD <- MD[!is.na(MD$budset_state),]
+```
+
+
+```{r eval = TRUE}
+# # remove NAs, 197, 198
+# MD <- MD[!MD$JDays=="197",]
+# MD <- MD[!MD$JDays=="198",]
+# MD <- MD[!MD$budset_state=="NA",]
+
+```
+
+## GLM to estimate budset date  
+```{r warning=FALSE}
+
+# for binomial data
+p = 0.5
+
+MD_df <- NULL
+
+for(i in levels(MD$plant_ID)){
+  
+  MD_tmp_model <- glm(budset_state ~ JDays, family="binomial",data=MD[MD$plant_ID==i,])
+  
+  MD_df = rbind(MD_df,c(i,coef(MD_tmp_model[1]),
+                        (log(p/(1-p)) - coef(MD_tmp_model)[1]) / coef(MD_tmp_model)[2]))
+}
+
+# dataframe for MD based on plant ID model 1
+
+MD_budset_plantID <- as.data.frame(MD_df[,c(-2,-3)])
+MD_budset_plantID <- as_tibble(MD_budset_plantID)
+
+
+colnames(MD_budset_plantID) <- c("plant_ID","JDays")
+MD_budset_plantID$JDays <- as.numeric(as.character(MD_budset_plantID$JDays))
+
+MD_budset_plantID <- MD_budset_plantID[MD_budset_plantID$JDays>195,] 
+MD_budset_plantID <- MD_budset_plantID[MD_budset_plantID$JDays<269,]
+hist(x=MD_budset_plantID$JDays)
+
+
+# for non binomial data
+MD_df2 <- NULL
+
+for(i in levels(MD$plant_ID)){
+  
+  if (sum(MD[MD$plant_ID==i,"budset_state"]) == nrow(MD[MD$plant_ID==i,])){ ## checking if all the values are one
+    plant_ID <- i
+    JDays <- min(MD[MD$plant_ID==i,"JDays"])
+    MD_temp <- cbind(plant_ID,JDays)
+    MD_df2 <- rbind(MD_df2, MD_temp)
+  }
+}
+
+MD_df2 <- as.data.frame(MD_df2)
+MD_df2$JDays <- as.numeric(as.character(MD_df2$JDays))
+hist(x=MD_df2$JDays)
+
+## Combine the dataset
+MD_budset <- rbind(MD_budset_plantID,MD_df2)
+MD_budset$plant_ID <- as.factor(MD_budset$plant_ID)
+
+
+MD_budset <- merge(MD_budset,MD_gar,by="plant_ID")
+MD_budset <- merge(MD_budset,meta,by="Family")
+colnames(MD_budset)[colnames(MD_budset)=="JDays"] <- "BudSet"
+MD_budset$BudSet <- round(MD_budset$BudSet)
+summary(MD_budset)
+```
+
+## Mortality data  
+```{r}
+######################### Mortality data ######################################
+mort_MD <- MD_comb_files %>% filter(MD_comb_files$trait == "Survival")
+mort_MD$value <- trimws(mort_MD$value) # remove leading and trailing spaces
+mort_MD <- mort_MD[,c("plant_ID","value")]
+colnames(mort_MD)[2] <- "Survival"
+mort_MD <- distinct(mort_MD)
+mort_MD <- mort_MD %>% filter(mort_MD$Survival == "Dead")
+
+## Remove the dead from the budset data  
+MD_budset <- MD_budset[!(MD_budset$plant_ID %in% mort_MD$plant_ID),]
+```
+
+
+
+
+
+```{r}
+### Output for MD
+
+# write.csv(MD_budset[,c("plant_ID","Family","Population","Location","Region","Latitude","Longitude","Elevation","Garden","Bed","BedRow","BedCol","Rack","RackRow","RackCol","BudSet")], "C:/Dropbox/Spruce_CommonGarden_Data/MD_site/MD_traitdataQCd/MD_BudSet_2020.csv", row.names=F, quote=F)
+```
+
+
+
+
+
+```{r eval=FALSE}
+# ################################## old code
+# p = 0.5
+# 
+# MD_df <- NULL
+# 
+# for(i in levels(MD$plant_ID)){
+# 
+# MD_tmp_model <- glm(budset_state ~ JDays, family="binomial",data=MD[MD$plant_ID==i,])
+# 
+# MD_df = rbind(MD_df,c(i,coef(MD_tmp_model[1]),
+#                       (log(p/(1-p)) - coef(MD_tmp_model)[1]) / coef(MD_tmp_model)[2]))
+# }
+# 
+# # dataframe for MD based on plant ID model 1
+# 
+# MD_budset_plantID <- as.data.frame(MD_df[,c(-2,-3)])
+# MD_budset_plantID <- as_tibble(MD_budset_plantID)
+# 
+# 
+# colnames(MD_budset_plantID) <- c("plant_ID","JDays")
+# MD_budset_plantID$JDays <- as.numeric(as.character(MD_budset_plantID$JDays))
+# 
+# MD_budset_plantID <- MD_budset_plantID[MD_budset_plantID$JDays>197,] 
+# MD_budset_plantID <- MD_budset_plantID[MD_budset_plantID$JDays<291,]
+# hist(x=MD_budset_plantID$JDays)
+# 
+# MD_budset <- unique(merge(x=MD_budset_plantID,
+#                 y=MD[,c("plant_ID","Population","Family","Garden","mBed","Region")],
+#                 by="plant_ID"))
+```
+
+
+
+# NC Garden {.tabset .tabset-fade .tabset-pills}   
+
+## Trait data
+```{r}
+## garden map
+NC_gar <- read_csv("C:\\Dropbox\\Spruce_CommonGarden_Data\\NC_site\\NC_garden.csv")
+
+## plant ID frame 
+NC_frame <- NC_gar[,c("PlantOrder", "plant_ID")]
+
+
+############## read in database files #########################################
+NC_files <- list.files(path = "C:\\Dropbox\\Spruce_CommonGarden_Data\\NC_site\\NC_traitdataRAW\\budset_2020", full.names = TRUE)
+
+## Convert timestamp to date
+NC_comb_files <- bind_rows(lapply(NC_files, fread)) %>% 
+              mutate(day = as.Date(timestamp))
+
+NC_comb_files <- NC_comb_files[,c("plant_ID", "Population","Family","Garden","Bed","trait","value","day")]
+```
+
+
+```{r}
+NC_comb_files <- NC_comb_files[Population!="FILLER",]
+
+###################################################reset point
+# NC_reset <- NC_comb_files
+# NC_comb_files <- NC_reset
+
+# Convert date to julian days
+NC_comb_files$JulianDay <- format(NC_comb_files$day, "%j")
+
+# budset
+levels(as.factor(NC_comb_files$trait)) # check for different spellings
+NC_budset <- NC_comb_files %>% filter(trait == "BudSet")
+
+# check levels of the values
+levels(as.factor(NC_budset$value))
+NC_budset <- NC_budset[!is.na(NC_budset$value),]
+
+# convert TRUE and true to 1
+NC_budset[NC_budset$value == "TRUE", "value"] <- 1
+NC_budset[NC_budset$value == "true", "value"] <- 1
+
+# convert FALSE and false to 0
+NC_budset[NC_budset$value == "FALSE", "value"] <- 0
+NC_budset[NC_budset$value == "false", "value"] <- 0
+
+# extract unique values
+NC_budset <- NC_budset[,c("plant_ID", "JulianDay","value")]
+NC_budset$value <- as.numeric(NC_budset$value)
+# NC_budset <- NC_budset[!is.na(NC_budset$value),]
+NC_budset <- na.omit(NC_budset)
+
+
+NC_budset$JulianDay <- as.character(NC_budset$JulianDay)
+NC_budset$value <- as.character(NC_budset$value)
+NC_budset$plant_ID <- as.character(NC_budset$plant_ID)
+
+NC_budset <- distinct(NC_budset)
+
+NC_budset <- NC_budset %>% 
+              pivot_wider(.,names_from = JulianDay, values_from = value) 
+
+
+
+# sort column order
+NC_order <- sort(names(NC_budset))
+length(NC_order)
+NC_order <- NC_order[-length(NC_order)] # remove plant_ID
+NC_order
+NC_budset <- NC_budset[,c("plant_ID", 
+                          "195", "196", "197", "198", "202", "203", "209", "218", "223", "231", "237",
+                          "246", "247", "248", "253", "259", "265", "269")]
+
+# change char to numeric
+NC_budset[,c(2:length(NC_budset))] <- as.data.frame(sapply(NC_budset[,c(2:length(NC_budset))], as.numeric))
+
+# use na.locf to replace the NAs with previous value
+# require(zoo) # for na.locf function
+# this function fills in the NAs within a column using the values of the previous non NA
+# values from a preeciding row
+# however this function only works on columns, so transponse (t) the dataframe to apply the function
+# then use apply() to apply the na.locf to all the rows
+NC_budset <- as_tibble(t(apply(NC_budset, 1, zoo::na.locf)))
+
+# change char to numeric again
+NC_budset[,c(2:length(NC_budset))] <- as.data.frame(lapply(NC_budset[,c(2:length(NC_budset))],
+                                                           as.numeric))
+
+# VT wide format - reset point
+NC_budset_wide <- NC_budset
+NC_budset      <- NC_budset_wide
+
+
+
+```
+
+
+Subset data based on NA values     
+```{r}
+# no NA subset
+NC_budset_part1 <- NC_budset_wide[!is.na(NC_budset_wide$`195`),] 
+NC_budset_part1 <- NC_budset_part1[,colSums(is.na(NC_budset_part1))==0] # remove cols with NA
+NC_budset_part1 <- NC_budset_part1[!(NC_budset_part1$`269`==0),] # remove plants without budset values
+
+# day 195 NA subset
+NC_budset_part2 <- NC_budset_wide[is.na(NC_budset_wide$`195`) & !is.na(NC_budset_wide$`196`),]
+NC_budset_part2 <- NC_budset_part2[,colSums(is.na(NC_budset_part2))==0]
+NC_budset_part2 <- NC_budset_part2[!(NC_budset_part2$`269`==0),]
+
+# day 196 NA subset
+NC_budset_part3 <- NC_budset_wide[is.na(NC_budset_wide$`196`) & !is.na(NC_budset_wide$`197`),]
+NC_budset_part3 <- NC_budset_part3[,colSums(is.na(NC_budset_part3))==0]
+NC_budset_part3 <- NC_budset_part3[!(NC_budset_part3$`269`==0),]
+
+# day 197 NA subset
+NC_budset_part4 <- NC_budset_wide[is.na(NC_budset_wide$`197`) & !is.na(NC_budset_wide$`198`),]
+NC_budset_part4 <- NC_budset_part4[,colSums(is.na(NC_budset_part4))==0]
+NC_budset_part4 <- NC_budset_part4[!(NC_budset_part4$`269`==0),]
+
+# day 198 NA subset
+NC_budset_part5 <- NC_budset_wide[is.na(NC_budset_wide$`198`) & !is.na(NC_budset_wide$`202`),]
+NC_budset_part5 <- NC_budset_part5[,colSums(is.na(NC_budset_part5))==0]
+NC_budset_part5 <- NC_budset_part5[!(NC_budset_part5$`269`==0),]
+
+# day 202 NA subset
+NC_budset_part6 <- NC_budset_wide[is.na(NC_budset_wide$`202`) & !is.na(NC_budset_wide$`203`),]
+NC_budset_part6 <- NC_budset_part6[,colSums(is.na(NC_budset_part6))==0]
+NC_budset_part6 <- NC_budset_part6[!(NC_budset_part6$`269`==0),]
+
+# day 203 NA subset
+NC_budset_part7 <- NC_budset_wide[is.na(NC_budset_wide$`203`) & !is.na(NC_budset_wide$`209`),]
+NC_budset_part7 <- NC_budset_part7[,colSums(is.na(NC_budset_part7))==0]
+NC_budset_part7 <- NC_budset_part7[!(NC_budset_part7$`269`==0),]
+
+# day 209 NA subset
+NC_budset_part8 <- NC_budset_wide[is.na(NC_budset_wide$`209`),]
+NC_budset_part8 <- NC_budset_part8[,colSums(is.na(NC_budset_part8))==0]
+NC_budset_part8 <- NC_budset_part8[!(NC_budset_part8$`269`==0),]
+```
+
+
+
+Remove excess ones and zeros
+```{r eval=FALSE}
+# part 1
+head(NC_budset_part1)
+length(NC_budset_part1) # max col length is 19
+## replace all the NAs with zero
+# NC_budset_part1[NC_budset_part1=="NA"]
+# NC_budset_part1[is.na(NC_budset_part1)] <- 0
+
+for(row in 1:nrow(NC_budset_part1)){
+ 
+   for(col in 2:17){
+    
+     ## if condition to skip single zeros in the data
+    if(NC_budset_part1[row,col] < NC_budset_part1[row,col-1] && NC_budset_part1[row,col] < NC_budset_part1[row,col+1]){
+      
+      NC_budset_part1[row,col] <- NC_budset_part1[row,col+1]
+    }
+     
+     ## if condition to reset the preceeding values based on the future trend
+    if(NC_budset_part1[row,col] < NC_budset_part1[row,col+1] && NC_budset_part1[row,col] < NC_budset_part1[row,col+2]){
+      
+      NC_budset_part1[row,c(2:col)] <- 0
+    } #else {NC_budset_part1[row,col] <- NC_budset_part1[row,col]}
+  }
+
+  
+}
+
+
+# part 2
+head(NC_budset_part2)
+length(NC_budset_part2) # max col length is 18
+
+for(row in 1:nrow(NC_budset_part2)){
+ 
+   for(col in 2:16){
+    
+     ## if condition to skip single zeros in the data
+    if(NC_budset_part2[row,col] < NC_budset_part2[row,col-1] && NC_budset_part2[row,col] < NC_budset_part2[row,col+1]){
+      
+      NC_budset_part2[row,col] <- NC_budset_part2[row,col+1]
+    }
+     
+     ## if condition to reset the preceeding values based on the future trend
+    if(NC_budset_part2[row,col] < NC_budset_part2[row,col+1] && NC_budset_part2[row,col] < NC_budset_part2[row,col+2]){
+      
+      NC_budset_part2[row,c(2:col)] <- 0
+    } 
+  }
+
+  
+}
+
+# part 3
+head(NC_budset_part3)
+length(NC_budset_part3) # max col length is 17
+
+for(row in 1:nrow(NC_budset_part3)){
+ 
+   for(col in 2:15){
+    
+     ## if condition to skip single zeros in the data
+    if(NC_budset_part3[row,col] < NC_budset_part3[row,col-1] && NC_budset_part3[row,col] < NC_budset_part3[row,col+1]){
+      
+      NC_budset_part3[row,col] <- NC_budset_part3[row,col+1]
+    }
+     
+     ## if condition to reset the preceeding values based on the future trend
+    if(NC_budset_part3[row,col] < NC_budset_part3[row,col+1] && NC_budset_part3[row,col] < NC_budset_part3[row,col+2]){
+      
+      NC_budset_part3[row,c(2:col)] <- 0
+    } 
+  }
+
+  
+}
+
+
+# part 4
+head(NC_budset_part4)
+length(NC_budset_part4) # max col length is 16
+
+for(row in 1:nrow(NC_budset_part4)){
+ 
+   for(col in 2:14){
+    
+     ## if condition to skip single zeros in the data
+    if(NC_budset_part4[row,col] < NC_budset_part4[row,col-1] && NC_budset_part4[row,col] < NC_budset_part4[row,col+1]){
+      
+      NC_budset_part4[row,col] <- NC_budset_part4[row,col+1]
+    }
+     
+     ## if condition to reset the preceeding values based on the future trend
+    if(NC_budset_part4[row,col] < NC_budset_part4[row,col+1] && NC_budset_part4[row,col] < NC_budset_part4[row,col+2]){
+      
+      NC_budset_part4[row,c(2:col)] <- 0
+    } 
+  }
+}
+
+# part 5
+head(NC_budset_part5)
+length(NC_budset_part5) # max col length is 15
+
+for(row in 1:nrow(NC_budset_part5)){
+ 
+   for(col in 2:13){
+    
+     ## if condition to skip single zeros in the data
+    if(NC_budset_part5[row,col] < NC_budset_part5[row,col-1] && NC_budset_part5[row,col] < NC_budset_part5[row,col+1]){
+      
+      NC_budset_part5[row,col] <- NC_budset_part5[row,col+1]
+    }
+     
+     ## if condition to reset the preceeding values based on the future trend
+    if(NC_budset_part5[row,col] < NC_budset_part5[row,col+1] && NC_budset_part5[row,col] < NC_budset_part5[row,col+2]){
+      
+      NC_budset_part5[row,c(2:col)] <- 0
+    } 
+  }
+}
+
+# part 6
+head(NC_budset_part6)
+length(NC_budset_part6) # max col length is 14
+
+for(row in 1:nrow(NC_budset_part6)){
+ 
+   for(col in 2:12){
+    
+     ## if condition to skip single zeros in the data
+    if(NC_budset_part6[row,col] < NC_budset_part6[row,col-1] && NC_budset_part6[row,col] < NC_budset_part6[row,col+1]){
+      
+      NC_budset_part6[row,col] <- NC_budset_part6[row,col+1]
+    }
+     
+     ## if condition to reset the preceeding values based on the future trend
+    if(NC_budset_part6[row,col] < NC_budset_part6[row,col+1] && NC_budset_part6[row,col] < NC_budset_part6[row,col+2]){
+      
+      NC_budset_part6[row,c(2:col)] <- 0
+    } 
+  }
+}
+
+# part 7
+head(NC_budset_part7)
+length(NC_budset_part7) # max col length is 13
+
+for(row in 1:nrow(NC_budset_part7)){
+ 
+   for(col in 2:11){
+    
+     ## if condition to skip single zeros in the data
+    if(NC_budset_part7[row,col] < NC_budset_part7[row,col-1] && NC_budset_part7[row,col] < NC_budset_part7[row,col+1]){
+      
+      NC_budset_part7[row,col] <- NC_budset_part7[row,col+1]
+    }
+     
+     ## if condition to reset the preceeding values based on the future trend
+    if(NC_budset_part7[row,col] < NC_budset_part7[row,col+1] && NC_budset_part7[row,col] < NC_budset_part7[row,col+2]){
+      
+      NC_budset_part7[row,c(2:col)] <- 0
+    } 
+  }
+}
+
+```
+
+Long format
+```{r}
+# convert to long format for modelling
+
+## part 1
+names(NC_budset_part1) # to check the days
+NC_budset_part1 <- NC_budset_part1 %>% tidyr::pivot_longer(cols=c("195":"269"),
+                                             names_to = "JDays",
+                                             values_to = "budset_state")
+NC_budset_part1$JDays <- as.numeric(NC_budset_part1$JDays)
+NC_budset_part1$plant_ID <- as.factor(NC_budset_part1$plant_ID)
+# NC_budset_part1$JDays <- as.factor(NC_budset_part1$JDays)
+
+## part 2
+names(NC_budset_part2) # to check the days
+NC_budset_part2 <- NC_budset_part2 %>% tidyr::pivot_longer(cols=c("196":"269"),
+                                             names_to = "JDays",
+                                             values_to = "budset_state")
+NC_budset_part2$JDays <- as.numeric(NC_budset_part2$JDays)
+NC_budset_part2$plant_ID <- as.factor(NC_budset_part2$plant_ID)
+# NC_budset_part2$JDays <- as.factor(NC_budset_part2$JDays)
+
+## part 3
+names(NC_budset_part3) # to check the days
+NC_budset_part3 <- NC_budset_part3 %>% tidyr::pivot_longer(cols=c("197":"269"),
+                                             names_to = "JDays",
+                                             values_to = "budset_state")
+NC_budset_part3$JDays <- as.numeric(NC_budset_part3$JDays)
+NC_budset_part3$plant_ID <- as.factor(NC_budset_part3$plant_ID)
+
+## part 4
+names(NC_budset_part4) # to check the days
+NC_budset_part4 <- NC_budset_part4 %>% tidyr::pivot_longer(cols=c("198":"269"),
+                                             names_to = "JDays",
+                                             values_to = "budset_state")
+NC_budset_part4$JDays <- as.numeric(NC_budset_part4$JDays)
+NC_budset_part4$plant_ID <- as.factor(NC_budset_part4$plant_ID)
+
+
+## part 5
+names(NC_budset_part5) # to check the days
+NC_budset_part5 <- NC_budset_part5 %>% tidyr::pivot_longer(cols=c("202":"269"),
+                                             names_to = "JDays",
+                                             values_to = "budset_state")
+NC_budset_part5$JDays <- as.numeric(NC_budset_part5$JDays)
+NC_budset_part5$plant_ID <- as.factor(NC_budset_part5$plant_ID)
+
+## part 6
+names(NC_budset_part6) # to check the days
+NC_budset_part6 <- NC_budset_part6 %>% tidyr::pivot_longer(cols=c("203":"269"),
+                                             names_to = "JDays",
+                                             values_to = "budset_state")
+NC_budset_part6$JDays <- as.numeric(NC_budset_part6$JDays)
+NC_budset_part6$plant_ID <- as.factor(NC_budset_part6$plant_ID)
+
+## part 7
+names(NC_budset_part7) # to check the days
+NC_budset_part7 <- NC_budset_part7 %>% tidyr::pivot_longer(cols=c("209":"269"),
+                                             names_to = "JDays",
+                                             values_to = "budset_state")
+NC_budset_part7$JDays <- as.numeric(NC_budset_part7$JDays)
+NC_budset_part7$plant_ID <- as.factor(NC_budset_part7$plant_ID)
+
+## part 8
+names(NC_budset_part8) # to check the days
+NC_budset_part8 <- NC_budset_part8 %>% tidyr::pivot_longer(cols=c("218":"269"),
+                                             names_to = "JDays",
+                                             values_to = "budset_state")
+NC_budset_part8$JDays <- as.numeric(NC_budset_part8$JDays)
+NC_budset_part8$plant_ID <- as.factor(NC_budset_part8$plant_ID)
+
+## Combine all files
+NC <- rbind(NC_budset_part1,NC_budset_part2,NC_budset_part3,NC_budset_part4,NC_budset_part5,NC_budset_part6,NC_budset_part7,NC_budset_part8)
+NC <- NC[!is.na(NC$budset_state),] # another check for NAs
+```
+
+
+```{r}
+## write files to reduce code run time in the future  
+
+# write.csv(NC,"C:\\Dropbox\\UVM\\Research\\Code\\CommonGardenTraits\\2020\\NC_budset_longformat_afterForLoop.csv")
+
+NC <- read.csv("C:\\Dropbox\\UVM\\Research\\Code\\CommonGardenTraits\\2020\\NC_budset_longformat_afterForLoop.csv", header=T, sep=",")
+NC <- NC[,-1]
+```
+
+
+## Reflushes   
+```{r}
+NC_Reflush <- NC_comb_files %>% filter(trait == "Reflush")
+NC_Reflush <- NC_Reflush[!NC_Reflush$value == "true",]  
+NC_Reflush <- NC_Reflush[!NC_Reflush$value == "false",]
+NC_Reflush <- NC_Reflush[!NC_Reflush$value == "NA",]
+
+# extract unique values
+NC_Reflush <- NC_Reflush[,c("plant_ID", "value")] #skipped col: "JulianDay"
+NC_Reflush <- unique(NC_Reflush)
+
+NC_Reflush <- NC_Reflush %>% pivot_wider(names_from = value, values_from = value)
+
+# sort column order
+NC_order <- sort(names(NC_Reflush))
+length(NC_order)
+NC_order <- NC_order[-length(NC_order)] # remove plant_ID
+NC_order
+NC_Reflush <- NC_Reflush[,c("plant_ID", "197", "198", "202", "203", "209", "223", "231", "246", "248")]
+
+# change char to numeric
+NC_Reflush[,c(2:length(NC_Reflush))] <- as.data.frame(sapply(NC_Reflush[,c(2:length(NC_Reflush))], as.numeric))
+
+# convert to long format for modelling
+names(NC_Reflush) # to check the days
+NC_Reflush <- NC_Reflush %>% tidyr::pivot_longer(cols=c("197":"248"),
+                                             names_to = "JDays",
+                                             values_to = "reflush")
+NC_Reflush$JDays <- as.numeric(NC_Reflush$JDays)
+NC_Reflush$plant_ID <- as.factor(NC_Reflush$plant_ID)
+
+NC_RF <- NC_Reflush[,c("plant_ID","reflush")]
+NC_RF <- NC_RF[!is.na(NC_RF$reflush),]
+NC_RF <- unique(NC_RF) # 402 unique reflush events
+# NC_RF is the final file for the reflush data
+
+```
+
+**Correct the budset data with the infusion of reflush trait - skipped**    
+```{r eval=F}
+NC_final <- NC
+
+NC_RF_subset <-NC_final[NC_final$plant_ID %in% NC_RF$plant_ID,] 
+
+
+NC_RF_subset <- na.omit(NC_RF_subset)
+NC_RF_subset <- merge(x=NC_RF_subset,y=NC_RF,all.x=TRUE, by="plant_ID") # attaching the reflush data
+
+# changing budset values based on reflush date
+for(i in 1:nrow(NC_RF_subset)){
+  if(NC_RF_subset[i,"JDays"] < NC_RF_subset[i,"reflush"]){
+  NC_RF_subset[i,"budset_state"] <- 0
+  }
+}
+
+NC_part1 <- NC_final[!NC_final$plant_ID %in% NC_RF$plant_ID,]
+
+NC <- rbind(NC_part1,NC_RF_subset[,-4])
+```
+
+```{r eval = TRUE}
+####################### attach meta data ######################################
+### Loading Metadata
+meta <- read.table("C:/Dropbox/Spruce_CommonGarden_Data/Meta/LocationMetaData.txt", header=T, sep="\t")
+
+NC <- merge(NC_gar, x=NC, all.x = TRUE, by="plant_ID")
+
+NC <- merge(NC,meta)
+
+NC <- NC %>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
+
+NC <- NC[,c("plant_ID","Population","Family","Garden","mBed","Region","JDays","budset_state")]
+
+NC$JDays <- as.numeric(NC$JDays)
+
+# convert to factors
+NC[,c("plant_ID","Population","Family","Garden","mBed")] <- lapply(NC[,c("plant_ID","Population","Family","Garden","mBed")], factor)
+
+NC <- NC[!is.na(NC$budset_state),]
+
+```
+
+## GLM to estimate budset date   
+```{r warning=FALSE}
+
+# for binomial data
+p = 0.5
+
+NC_df <- NULL
+
+for(i in levels(NC$plant_ID)){
+
+NC_tmp_model <- glm(budset_state ~ JDays, family="binomial",data=NC[NC$plant_ID==i,])
+
+NC_df = rbind(NC_df,c(i,coef(NC_tmp_model[1]),
+                      (log(p/(1-p)) - coef(NC_tmp_model)[1]) / coef(NC_tmp_model)[2]))
+}
+
+# dataframe for NC based on plant ID model 1
+
+NC_budset_plantID <- as.data.frame(NC_df[,c(-2,-3)])
+NC_budset_plantID <- as_tibble(NC_budset_plantID)
+
+
+colnames(NC_budset_plantID) <- c("plant_ID","JDays")
+NC_budset_plantID$JDays <- as.numeric(as.character(NC_budset_plantID$JDays))
+
+NC_budset_plantID <- NC_budset_plantID[NC_budset_plantID$JDays>195,] 
+NC_budset_plantID <- NC_budset_plantID[NC_budset_plantID$JDays<269,]
+hist(x=NC_budset_plantID$JDays)
+
+
+# for non binomial data
+NC_df2 <- NULL
+
+for(i in levels(NC$plant_ID)){
+
+if (sum(NC[NC$plant_ID==i,"budset_state"]) == nrow(NC[NC$plant_ID==i,])){ ## checking if all the values are one
+  plant_ID <- i
+  JDays <- min(NC[NC$plant_ID==i,"JDays"])
+  NC_temp <- cbind(plant_ID,JDays)
+  NC_df2 <- rbind(NC_df2, NC_temp)
+ }
+}
+
+NC_df2 <- as.data.frame(NC_df2)
+NC_df2$JDays <- as.numeric(as.character(NC_df2$JDays))
+hist(x=NC_df2$JDays)
+
+## Combine the dataset
+NC_budset <- rbind(NC_budset_plantID,NC_df2)
+NC_budset$plant_ID <- as.factor(NC_budset$plant_ID)
+
+
+NC_budset <- merge(NC_budset,NC_gar,by="plant_ID")
+NC_budset <- merge(NC_budset,meta,by="Family")
+colnames(NC_budset)[colnames(NC_budset)=="JDays"] <- "BudSet"
+NC_budset$BudSet <- round(NC_budset$BudSet)
+
+
+### old code
+# for(i in levels(NC$plant_ID)){
+# 
+# if (NC[NC$plant_ID==i,"budset_state"] == 1){
+#   plant_ID <- i
+#   JDays <- min(NC[NC$plant_ID==i,"JDays"])
+#   NC_temp <- cbind(plant_ID,JDays)
+#   NC_df2 <- rbind(NC_df2, NC_temp)
+#  }
+# }
+```
+
+## Mortality data  
+```{r}
+######################### Mortality data ######################################
+mort_NC <- read.csv("C:\\Dropbox\\Spruce_CommonGarden_Data\\NC_site\\NC_traitdataRAW\\harvest_2020\\2020-10-22-01-09-39_NC_garden_JA-FINAL_table.csv", header=TRUE)
+
+mort_NC$Survival <- trimws(mort_NC$Survival) # remove leading and trailing spaces
+mort_NC <- mort_NC %>% filter(mort_NC$Survival == "Dead")
+mort_NC <- mort_NC[,c("plant_ID","Survival")]
+
+## Remove the dead from the budset data  
+
+
+NC_budset <- NC_budset[!(NC_budset$plant_ID %in% mort_NC$plant_ID),]
+
+
+```
+
+
+```{r}
+### Output for NC
+
+# write.csv(NC_budset[,c("plant_ID","Family","Population","Location","Region","Latitude","Longitude","Elevation","Garden","Bed","BedRow","BedCol","Rack","RackRow","RackCol","BudSet")], "C:/Dropbox/Spruce_CommonGarden_Data/NC_site/NC_traitdataQCd/NC_BudSet_2020.csv", row.names=F, quote=F)
+```
+
+## Ignore  
+- excluding commented individuals for now - dated 14 Nov 2020  
+```{r eval=FALSE}
+######################### Missing/Dead terminal buds ######################################
+# noTerminal_VT <- read.csv("C:\\Dropbox\\Spruce_CommonGarden_Data\\VT_site\\VT_traitdataRAW\\budset_commented_2020\\no_terminal_buds.csv",header = TRUE)
+# noTerminal_VT <- noTerminal_VT[,c("plant_ID","value")]
+
+## Remove the missing/dead terminals from the budset data  
+# VT <- VT[!(VT$plant_ID %in% noTerminal_VT$plant_ID),]
+```
+
+# Budset 2020
+```{r}
+VT_final <- VT_budset[,c("plant_ID","Family","Population","Location","Region","Latitude","Longitude","Elevation","Garden","Bed","BedRow","BedCol","Rack","RackRow","RackCol","BudSet")]
+
+MD_final <- MD_budset[,c("plant_ID","Family","Population","Location","Region","Latitude","Longitude","Elevation","Garden","Bed","BedRow","BedCol","Rack","RackRow","RackCol","BudSet")]
+
+NC_final <- NC_budset[,c("plant_ID","Family","Population","Location","Region","Latitude","Longitude","Elevation","Garden","Bed","BedRow","BedCol","Rack","RackRow","RackCol","BudSet")]
+
+Budset_2020 <- rbind(VT_final,MD_final,NC_final)
+```
+
+
+```{r}
+### Output for budset 2020
+
+# write.csv(Budset_2020[,c("plant_ID","Family","Population","Location","Region","Latitude","Longitude","Elevation","Garden","Bed","BedRow","BedCol","Rack","RackRow","RackCol","BudSet")], "C:\\Dropbox\\Spruce_CommonGarden_Data\\trait_data\\BudSet_2020.csv", row.names=F, quote=F)
+```
+
+
+
+
+# Visualising data  
+```{r}
+# special edits to MD data before visualization
+MD_edited <- merge(x=MD,y=MD_gar,by="plant_ID",all.x=T)
+MD_edited <- merge(x=MD_edited,y=meta,by="Family",all.x=T)
+## Remove the dead from the budset data  
+MD_edited <- MD_edited[!(MD_edited$plant_ID %in% mort_MD$plant_ID),]
+
+# edits to VT
+VT <- merge(VT,VT_gar,by="plant_ID")
+VT <- merge(VT,meta,by="Family")
+
+```
+
+
+```{r warning=FALSE}
+
+require(ggplot2)
+
+VT %>% group_by(Region) %>% 
+ggplot(., aes(x=JDays, y=budset_state, color=Family)) + #geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE) + 
+  facet_grid(.~Region) +  theme_minimal() + theme(legend.position = "none") 
+
+MD_edited %>% group_by(Region) %>% 
+ggplot(., aes(x=JDays, y=budset_state, color=Family)) + #geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE) + 
+  facet_grid(.~Region) +  theme_minimal() + theme(legend.position = "none") 
+
+NC %>% group_by(Region) %>% 
+ggplot(., aes(x=JDays, y=budset_state, color=Family)) + #geom_point() + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE) + 
+  facet_grid(.~Region) +  theme_minimal() + theme(legend.position = "none") 
+```
+
+
+# JUNK CODE  
+- Ignore code from here onwards  
+## Extract the asymptope values as budset values     
+
+Model information    
+* Random effects need to be specified for each parameter  
+* xmid: a numeric parameter representing the x value at the inflection point of the curve  
+* Asym: a numeric parameter representing the asymptote  
+* scal: a numeric scale parameter on the input axis  
+* formula: expression Asym/(1+exp((xmid-input)/scal))  
+* nAGQ: the number of points per axis for evaluating the adaptive Gauss-Hermite approximation to the log-likelihood, set to 0= faster but less exact form of parameter estimation  
+
+The nlmer documentation for more details:  
+
+Basicaly, the equation is resp ~ Nonlin(...) ~ fixed + random <-- a part of nonlinear followed by the fixed and random  effects.    
+
+onlinear mixed models --- 3-part formulas ---   
+1. basic nonlinear fit. Use stats::SSlogis for its   
+- implementation of the 3-parameter logistic curve.   
+- "SS" stands for "self-starting logistic", but the   
+- "self-starting" part is not currently used by nlmer ... 'start' is necessary   
+
+
+```{r eval=FALSE}
+
+# starting value for the model
+require(nlme)
+require(lmerTest)
+
+## find starting parameters
+VT_initVals <- getInitial(budset_state ~ SSlogis(JDays, Asym, xmid, scal), data = VT)
+VT_initVals <- c(Asym=0.988261, xmid=260, scal=-16)
+
+
+## without optimizers
+VT_JDAYS_mod0=nlmer(budset_state ~ SSlogis(JDays, Asym, xmid, scal) ~ Asym + xmid + scal + 
+             (Asym |plant_ID) + (xmid|plant_ID), #+ (Asym |mBed) + (xmid|mBed),
+             data=VT, nAGQ=1, verbose=2,
+             start=VT_initVals)
+
+
+
+## inflecion point for individual plants to infer days of budset
+VT_JDAYS_mod1=nlmer(budset_state ~ SSlogis(JDays, Asym, xmid, scal) ~ Asym + xmid + scal + 
+             (Asym |plant_ID) + (xmid|plant_ID), #+ (Asym |mBed) + (xmid|mBed),
+             data=VT, nAGQ=1, verbose=0,
+              start=VT_initVals)
+
+VT_JDAYS_mod1=nlmer(budset_state ~ SSlogis(JDays, Asym, xmid, scal) ~ Asym + xmid + scal + 
+             (Asym |plant_ID) + (xmid|plant_ID), #+ (Asym |mBed) + (xmid|mBed),
+             data=VT, nAGQ=1, verbose=2,
+             nlmerControl(optimizer = "Nelder_Mead", tolPwrss = 1e-6, #lower=-Inf,upper=Inf,
+                          optCtrl = list()),
+              start=VT_initVals)
+
+# 2nd optimizer  
+VT_JDAYS_mod2=nlmer(budset_state ~ SSlogis(JDays, Asym, xmid, scal) ~ Asym + xmid + scal + 
+             (Asym |plant_ID) + (xmid|plant_ID), #+ (Asym |mBed) + (xmid|mBed),
+             data=VT, nAGQ=1, verbose=TRUE,
+             nlmerControl(optimizer = "bobyqa", tolPwrss = 1e-1),
+              start=VT_initVals)
+
+summary(VT_JDAYS_mod1)
+coef(VT_JDAYS_mod1)
+
+
+
+
+
+
+
+
+
+
+# effect size estimates for growth trait
+require(sjPlot)
+plot_model(mod1, vline.color = "red", sort.est=TRUE, show.values = T, value.offset = .3) + 
+  theme_minimal() +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12,face="bold"),
+        strip.text.x = element_text(size = 12, colour = "black", angle = 0, face="bold"))
+
+sjPlot::plot_model(mod1)
+
+# dataframe for VT based on plant ID model 1
+
+VT_budset_plantID <- as.data.frame(coef(VT_JDAYS_mod1)[1])
+VT_budset_plantID <- coef(VT_JDAYS_mod1)
+VT_budset_plantID <- VT_budset_plantID$plant_ID
+VT_budset_plantID$plant_ID <- rownames(VT_budset_plantID)
+VT_budset_plantID <- as_tibble(VT_budset_plantID)
+
+
+# some stats for VT garden
+VT_budset_plantID %>%
+  summarise(meanA=mean(Asym), meanX=mean(xmid))
+VT_budset_plantID %>%
+  summarise(rangeA=range(Asym), rangeX=range(xmid))
+
+
+# Rename the columns of a tibble
+# VT_budset_Family <- as_tibble(VT_budset_Family, rownames=NA)
+# VT_budset_Family <- bind_cols(rownames(VT_budset_Family), VT_budset_Family)
+# VT_budset_Family %>% rename(
+#   rownames(VT_budset_Family) = Family,
+#   Family.Asym = Asym,
+#   Family.xmid = xmid,
+#   Family.scal = scal
+# )
+
+```
+
+
+## Old glm models
+```{r eval=FALSE}
+# glm with NC_dummy1
+# convert to long format for modelling
+names(NC_dummy1) # to check the days
+NC_dummy2 <- NC_dummy1 %>% tidyr::pivot_longer(cols=c("195":"269"),
+                                             names_to = "JDays",
+                                             values_to = "budset_state")
+NC_dummy2$JDays <- as.numeric(NC_dummy2$JDays)
+NC_dummy2$plant_ID <- as.factor(NC_dummy2$plant_ID)
+
+
+
+
+
+
+
+
+# glm
+
+p = 0.9
+
+
+NC_df_dum <- NULL
+
+for(i in levels(NC_dummy2$plant_ID)){
+
+NC_tmp_model_dum <- glm(budset_state ~ JDays, family="binomial",data=NC_dummy2[NC_dummy2$plant_ID==i,])
+
+NC_df_dum = rbind(NC_df_dum,c(i,coef(NC_tmp_model_dum[1]),
+                      (log(p/(1-p)) - coef(NC_tmp_model_dum)[1]) / coef(NC_tmp_model_dum)[2]))
+}
+
+# dataframe for NC_dummy2 based on plant ID model 1
+
+NC_dummy_plantID <- as.data.frame(NC_df_dum[,c(-2,-3)])
+NC_dummy_plantID <- as_tibble(NC_dummy_plantID)
+
+
+colnames(NC_dummy_plantID) <- c("plant_ID","JDays")
+NC_dummy_plantID$JDays <- as.numeric(as.character(NC_dummy_plantID$JDays))
+
+NC_dummy_plantID <- NC_dummy_plantID[NC_dummy_plantID$JDays>195,] 
+NC_dummy_plantID <- NC_dummy_plantID[NC_dummy_plantID$JDays<269,]
+hist(x=NC_dummy_plantID$JDays)
+
+NC_budset_trial <- unique(merge(x=NC_dummy_plantID,
+                y=NC[,c("plant_ID","Population","Family","Garden","mBed","Region")],
+                by="plant_ID"))
+
+
+
+
+
+
+```
+
+
+
+
+```{r eval=FALSE}
+# for loop to replace the NAs with zeros - working for loop
+# no longer needed as na.locf is used to replace the NAs
+for (i in 1:nrow(testdata)){ # going down the rows
+  for (j in 2:length(testdata)){ # going across the columns
+    if(is.na(testdata[i,j])){
+      testdata[i,j] <- 0
+    }
+    else{
+      testdata[i,j] <- testdata[i,j]
+    }
+  }
+}
+
+```

@@ -49,7 +49,7 @@ budset_2020 <- read.csv("./trait_data/BudSet_2020.csv", stringsAsFactors = T)
 budbreak_2020 <- read.csv("./trait_data/BudBreak_2020_cGDD.csv", stringsAsFactors = T)
 growth_2019 <- read.csv("./trait_data/Growth_2019.csv", stringsAsFactors = T)
 growth_2020 <- read.csv("./trait_data/Growth_2020.csv", stringsAsFactors = T)
-Plasticity <- read.csv("./trait_data/Plasticity_TD.csv", stringsAsFactors = T)
+Plasticity <- read.csv("./trait_data/Plasticity.csv", stringsAsFactors = T)
 ```
 
 * Reorder levels  
@@ -195,7 +195,12 @@ budset19_mod1 <- lmer(data = budset_2019, na.action = na.omit,
                BudSet ~ Garden * Region +
                (1|Population) + (1|mBed) +
                (Garden|Family)) # G x E
+```
 
+
+
+
+```{r}
 budset19_mod1a <- lmer(data = budset_2019, na.action = na.omit,
                BudSet ~ Garden * Region +
                (1|Population) + (1|mBed) + (1|Family))
@@ -430,24 +435,6 @@ G19_B <-      ggplot(heightData19,
               scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
 ```
 
-```{r}
-ggplot(heightData19,
-                   aes(x=Garden, y=Growth, color=Region)) +
-              stat_summary(aes(group = Region), fun.y = mean, geom = "path", size = 1.5) +
-              stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1, size=1.5) +
-              stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 5) + 
-              # Lines by species using grouping
-              stat_summary(aes(group = Region), geom = "line", fun = mean) +
-              ylab("") + xlab("") + 
-              theme(legend.position="right") +
-              theme_bw() + theme(axis.text=element_text(size=18), 
-                                   axis.title=element_text(size=20,face="bold"),
-                                   legend.title = element_text(color = "black", size = 14),
-                                   legend.text = element_text(color = "black", size = 13)) +
-              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
-```
-
-
 
 
 **2020**    
@@ -520,6 +507,8 @@ G20_D <-  ggplot(heightData20,
                                    legend.text = element_text(color = "black", size = 13)) +
               scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
 ```
+
+
 
 
 
@@ -619,7 +608,6 @@ BS19_B <- ggplot(budset_2019_2,
               scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
 ```
 
-
 **Bud set 2020 (DOY)**    
 
 ***Family plot***   
@@ -661,6 +649,7 @@ BS20_C <- BS20 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
 
 ```
 
+
 ***Region plot***  
 ```{r}
 # Rxn - population
@@ -689,6 +678,7 @@ BS20_D <- ggplot(budset_2020_2,
                                    legend.text = element_text(color = "black", size = 13)) +
               scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
 ```
+
 
 **Combined plot for bud set**  
 ```{r}
@@ -782,6 +772,7 @@ BB20_B <- ggplot(budbreak,
               scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
 ```
 
+
 **Combined plot for bud break - cGDD**  
 ```{r}
 legend_PC <- get_legend(BB20_A) 
@@ -802,7 +793,169 @@ plot_grid(BB_grid, leg_full, ncol = 2, rel_widths = c(1,.08))
   
 ```
 
+## Figure in text  
+
+```{r}
+A <- ggplot(budset_2019_2,
+             aes(x=Garden, y=BudSet, color=Region)) +
+          stat_summary(aes(group = Region), fun.y = mean, geom = "path", size = 1.5) +
+              stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1, size=1.5) +
+              stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 5) + 
+              # Lines by species using grouping
+              stat_summary(aes(group = Region), geom = "line", fun = mean) +
+              ylab("Bud set (DOY)") + xlab("") + 
+              theme(legend.position="right") +
+              theme_bw() + theme(axis.text=element_text(size=18), 
+                                   axis.title=element_text(size=20,face="bold"),
+                                   legend.title = element_text(color = "black", size = 14),
+                                   legend.text = element_text(color = "black", size = 13)) +
+              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
+
+B <- ggplot(budset_2020_2,
+               aes(x=Garden, y=BudSet, color=Region)) +
+          stat_summary(aes(group = Region), fun.y = mean, geom = "path", size = 1.5) +
+              stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1, size=1.5) +
+              stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 5) + 
+              # Lines by species using grouping
+              stat_summary(aes(group = Region), geom = "line", fun = mean) +
+              ylab("") + xlab("") + 
+              theme(legend.position="right") +
+              theme_bw() + theme(axis.text=element_text(size=18), 
+                                   axis.title=element_text(size=20,face="bold"),
+                                   legend.title = element_text(color = "black", size = 14),
+                                   legend.text = element_text(color = "black", size = 13)) +
+              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
+
+C <- ggplot(budbreak,
+               aes(x=Garden, y=cGDD, color=Region)) +
+          stat_summary(aes(group = Region), fun.y = mean, geom = "path", size = 1.5) +
+              stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1, size=1.5) +
+              stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 5) + 
+              # Lines by species using grouping
+              stat_summary(aes(group = Region), geom = "line", fun = mean) +
+              ylab("Bud break (cGDD)") + xlab("") + 
+              theme(legend.position="right") +
+              theme_bw() + theme(axis.text=element_text(size=18), 
+                                   axis.title=element_text(size=20,face="bold"),
+                                   legend.title = element_text(color = "black", size = 14),
+                                   legend.text = element_text(color = "black", size = 13)) +
+              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
+
+
+D <-      ggplot(heightData19,
+                   aes(x=Garden, y=Growth, color=Region)) + 
+              stat_summary(aes(group = Region), fun.y = mean, geom = "path", size = 1.5) +
+              stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1, size=1.5) +
+              stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 5) + 
+              # Lines by species using grouping
+              stat_summary(aes(group = Region), geom = "line", fun = mean) +
+              ylab("Growth (cm)") + xlab("2019") + 
+              theme(legend.position="right") +
+              theme_bw() + theme(axis.text=element_text(size=18), 
+                                   axis.title=element_text(size=20,face="bold"),
+                                   legend.title = element_text(color = "black", size = 14),
+                                   legend.text = element_text(color = "black", size = 13)) +
+              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
+
+E <-  ggplot(heightData20,
+               aes(x=Garden, y=Growth, color=Region)) +
+          stat_summary(aes(group = Region), fun.y = mean, geom = "path", size = 1.5) +
+              stat_summary(aes(color = Region), fun.data = mean_cl_boot, geom = "errorbar", width = 0.1, size=1.5) +
+              stat_summary(aes(color = Region), fun.y = mean, geom = "point", size = 5) + 
+              # Lines by species using grouping
+              stat_summary(aes(group = Region), geom = "line", fun = mean) +
+              ylab("") + xlab("2020") + 
+              theme(legend.position="right") +
+              theme_bw() + theme(axis.text=element_text(size=18), 
+                                   axis.title=element_text(size=20,face="bold"),
+                                   legend.title = element_text(color = "black", size = 20),
+                                   legend.text = element_text(color = "black", size = 18)) +
+              scale_color_manual(values = c("Core" = "goldenrod2","Margin"="green2", "Edge"="steelblue"))
+
+legend <- get_legend(E + theme(legend.position="right"))
+HA_grid <- cowplot::plot_grid( A + theme(legend.position="none"),
+           B + theme(legend.position="none"),
+           legend,
+           C + theme(legend.position="none"),
+           D + theme(legend.position="none"),
+           E + theme(legend.position="none"),
+           align = 'vh',
+           labels = c("A", "B","" ,"C", "D","E"),
+           hjust = -1,
+           nrow = 3
+           )
+HA_grid
+```
+
+
 ## Supplementary  
+
+***GxE at family level***  
+```{r}
+S.A <-     BS19 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                              xlab("") + ylab("Bud set (DOY)") +
+              scale_color_viridis(option = "A", direction = -1) +
+              theme_bw() + theme(axis.text=element_text(size=18), 
+                               axis.title=element_text(size=20,face="bold"),
+                               legend.title = element_text(color = "black", size = 14),
+                               legend.text = element_text(color = "black", size = 13)) + 
+        scale_x_discrete(labels=c("Vermont" = "VT", "Maryland" = "MD", "North_Carolina" = "NC")) + 
+        theme(strip.text.x = element_text(size = 30))
+
+S.B <- BS20 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                                  xlab("") + ylab("") +
+                  scale_color_viridis(option = "A", direction = -1) +
+                  theme_bw() + theme(axis.text=element_text(size=18), 
+                               axis.title=element_text(size=20,face="bold"),
+                               legend.title = element_text(color = "black", size = 14),
+                               legend.text = element_text(color = "black", size = 13)) + 
+        scale_x_discrete(labels=c("Vermont" = "VT", "Maryland" = "MD", "North_Carolina" = "NC")) + 
+        theme(strip.text.x = element_text(size = 30))
+
+S.C <- BB20 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                                  xlab("") + ylab("Bud break (cGDD)") +
+                  scale_color_viridis(option = "A", direction = -1) +
+                  theme_bw() + theme(axis.text=element_text(size=18), 
+                               axis.title=element_text(size=20,face="bold"),
+                               legend.title = element_text(color = "black", size = 14),
+                               legend.text = element_text(color = "black", size = 13)) + 
+        scale_x_discrete(labels=c("Vermont" = "VT", "Maryland" = "MD", "North_Carolina" = "NC")) + 
+        theme(strip.text.x = element_text(size = 30))
+
+S.D <- G19 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                            xlab("2019") + ylab("Growth (cm)") +
+            scale_color_viridis(option = "A", direction = -1) +
+            theme_bw() + theme(axis.text=element_text(size=18), 
+                               axis.title=element_text(size=20,face="bold"),
+                               legend.title = element_text(color = "black", size = 14),
+                               legend.text = element_text(color = "black", size = 13)) + 
+        scale_x_discrete(labels=c("Vermont" = "VT", "Maryland" = "MD", "North_Carolina" = "NC")) + 
+        theme(strip.text.x = element_text(size = 30))
+
+S.E <-  G20 + geom_line(aes(y=pred,group=Family,colour=PC1)) +
+                          xlab("2020") + ylab("") +
+          scale_color_viridis(option = "A", direction = -1) +
+          theme_bw() + theme(axis.text=element_text(size=18), 
+                               axis.title=element_text(size=20,face="bold"),
+                               legend.title = element_text(color = "black", size = 14),
+                               legend.text = element_text(color = "black", size = 13)) + 
+        scale_x_discrete(labels=c("Vermont" = "VT", "Maryland" = "MD", "North_Carolina" = "NC")) + 
+        theme(strip.text.x = element_text(size = 30))
+
+legend <- get_legend(S.E + theme(legend.position="right"))
+SA_grid <- cowplot::plot_grid( S.A + theme(legend.position="none"),
+           S.B + theme(legend.position="none"),
+           legend,
+           S.C + theme(legend.position="none"),
+           S.D + theme(legend.position="none"),
+           S.E + theme(legend.position="none"),
+           align = 'vh',
+           labels = c("A", "B","" ,"C", "D","E"),
+           hjust = -1,
+           nrow = 3
+           )
+SA_grid
+```
 
 **Bud break 2020 (DOY)**  
 
@@ -873,15 +1026,13 @@ BB20_DOY_B <- ggplot(budbreak,
 
 **Combined plot - Supplementary figure**  
 ```{r}
-
-
 legend_PC <- get_legend(BB20_DOY_A) 
 legend_RE <- get_legend(BB20_DOY_B)
 
-leg_full <- plot_grid(legend_PC, legend_RE,
+leg_full <- cowplot::plot_grid(legend_PC, legend_RE,
                    nrow = 2)
 
-BB_DOY_grid <- plot_grid(BB20_DOY_A + theme(legend.position="none"),
+BB_DOY_grid <- cowplot::plot_grid(BB20_DOY_A + theme(legend.position="none"),
                          BB20_DOY_B + theme(legend.position="none"),
                          align = 'vh',
                          labels = c("A", "B"),
@@ -889,7 +1040,7 @@ BB_DOY_grid <- plot_grid(BB20_DOY_A + theme(legend.position="none"),
                          nrow = 1,
                          rel_widths = c(1,.7))
 # bud set DOY final 
-plot_grid(BB_DOY_grid, leg_full, ncol = 2, rel_widths = c(1,.08))
+cowplot::plot_grid(BB_DOY_grid, leg_full, ncol = 2, rel_widths = c(1,.08))
   
 ```
 
