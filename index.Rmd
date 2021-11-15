@@ -135,54 +135,54 @@ map %>%
 
 ## Data
 
-The data used for this study are provided here. The meta data for the whole study system is at 1. The curated data for the trait for bud set, bud break and height growth for each season (2019 and 2020) are provided in the table at 2. The plasticity for all the traits are given as complete data at 3, along with bud break in day of year (DOY) provided in the supplementary. Finally, the PCA scores and PCA loading for defining the climate space and the PCA plot are at 4.
+The data used for this study are provided here. The meta data for the whole study system is at 1. The curated data for the trait for bud set, bud break and height growth for each season (2019 and 2020) are provided in the table at 2. The plasticity for all the traits are given as complete data at 3, along with bud break in day of year (DOY) . Finally, the PCA scores and PCA loading for defining the climate space and the PCA plot are at 4.
 
-+--------+:---------------:+:---------------------------------------------------------:+
-| Sl No. |                 | Main Text                                                 |
-+--------+-----------------+-----------------------------------------------------------+
-| 1      | Meta            | [Meta data](./data/meta/RS_Exome_metadata.txt)            |
-+--------+-----------------+-----------------------------------------------------------+
-| 2      | Trait Data      | [Bud Break (2020)](./data/trait_data/BudBreak_2020.csv)   |
-|        |                 |                                                           |
-|        |                 | [Bud Set (2019)](./data/trait_data/BudSet_2019.csv)       |
-|        |                 |                                                           |
-|        |                 | [Bud Set (2020)](./data/trait_data/BudSet_2020.csv)       |
-|        |                 |                                                           |
-|        |                 | [Growth (2019)](./data/trait_data/Growth_2019.csv)        |
-|        |                 |                                                           |
-|        |                 | [Growth (2020)](./data/trait_data/Growth_2020.csv)        |
-+--------+-----------------+-----------------------------------------------------------+
-| 3      | Plasticity Data | [Complete data](./data/plasticity_data/Plasticity.csv) |
-+--------+-----------------+-----------------------------------------------------------+
-| 4      | PC scores       | [PCA scores](./data/PCA/PCA_score.csv)                    |
-|        |                 |                                                           |
-|        |                 | [PCA loadings](./data/PCA/PCA_loadings.csv)               |
-+--------+-----------------+-----------------------------------------------------------+
++--------+:----------------------:+:-------------------------------------------------------:+
+| Sl No. |                        | Main Text                                               |
++--------+------------------------+---------------------------------------------------------+
+| 1      | Mother tree infomation | [Meta data](./data/meta/RS_Exome_metadata.txt)          |
++--------+------------------------+---------------------------------------------------------+
+| 2      | Trait Data             | [Bud Break (2020)](./data/trait_data/BudBreak_2020.csv) |
+|        |                        |                                                         |
+|        |                        | [Bud Set (2019)](./data/trait_data/BudSet_2019.csv)     |
+|        |                        |                                                         |
+|        |                        | [Bud Set (2020)](./data/trait_data/BudSet_2020.csv)     |
+|        |                        |                                                         |
+|        |                        | [Growth (2019)](./data/trait_data/Growth_2019.csv)      |
+|        |                        |                                                         |
+|        |                        | [Growth (2020)](./data/trait_data/Growth_2020.csv)      |
++--------+------------------------+---------------------------------------------------------+
+| 3      | Plasticity Data        | [Complete data](./data/plasticity_data/Plasticity.csv)  |
++--------+------------------------+---------------------------------------------------------+
+| 4      | PC scores              | [PCA scores](./data/PCA/PCA_score.csv)                  |
+|        |                        |                                                         |
+|        |                        | [PCA loadings](./data/PCA/PCA_loadings.csv)             |
++--------+------------------------+---------------------------------------------------------+
 
 : Data used for statistical analysis
 
 ## Methods
 
-Statistical methods used to answer research question 1 are in climate transfer distance (1), climate data and the PCA (first half of PCA and Plasticity (6)), genetic variation and GxE (2) and broad sense heritability (3).
+Statistical methods used to answer research question 1 are in Plasticity model (1), climate PCA and effect of source climate on plasticity (first half of Climate PCA and Adaptive plasticity (6)), genetic variation and GxE (2) and broad sense heritability (3).
 
 The second research questions looks into the genetic correlation that may be present between the traits (4). Genetic correlation and broad sense heritability was estimated using Bayesian appraoches (MCMCglmm models).
 
-Finally, the third research question dwelled into the plasticity present in the traits (5) and whether these plasticities were adaptive or mal-adaptive in nature (second half of PCA and Plasticity (6)).
+Finally, the third research question dwelled into whether trait plasticities were adaptive or mal-adaptive in nature (second half of Climate PCA and Adaptive plasticity (5)).
 
-+--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------+
-| Sl No. | Scripts                                                                                                                                                                                                                         | html                                                      |
-+:======:+:===============================================================================================================================================================================================================================:+:=========================================================:+
-| 1      | [Climate transfer distance](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/5_traitPlasticity_TD.Rmd)                                                                                                                 | [Climate transfer distance](./5_traitPlasticity.html)     |
-+--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------+
-| 2      | [Genetic variation and GxE](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/0_reaction_norms.Rmd)                                                                                                                     | [Genetic variation and GxE](./0_reaction_norms.html)      |
-+--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------+
-| 3      | [MCMCglmm model](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/1_heritability.R) ; [Heritability Estimate per garden](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/2_heritability_values_per_garden.R) | NA                                                        |
-+--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------+
-| 4      | [MCMCglmm model](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/3_genetic_correlation_MCMCmodel_final.R)                                                                                                             | [Genetic Correlation](./4_genetic_correlation_plots.html) |
-+--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------+
-| 5      | [PCA and Plasticity](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/10_PCA_and_Plasticity.Rmd)                                                                                                                       | [PCA and Plasticity](./10_PCA_and_Plasticity.html)        |
-+--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------+
-| 6      | [Bud Set 2020 estimation]()                                                                                                                                                                                                     | NA                                                        |
-+--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------+
++--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------+
+| Sl No. | Scripts                                                                                                                                                                                                                         | html                                                                |
++:======:+:===============================================================================================================================================================================================================================:+:===================================================================:+
+| 1      | [Plasicity model](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/5_traitPlasticity.Rmd)                                                                                                                              | [Plasticity model](./5_traitPlasticity.html)                        |
++--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------+
+| 2      | [Genetic variation and GxE](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/0_reaction_norms.Rmd)                                                                                                                     | [Genetic variation and GxE](./0_reaction_norms.html)                |
++--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------+
+| 3      | [MCMCglmm model](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/1_heritability.R) ; [Heritability Estimate per garden](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/2_heritability_values_per_garden.R) | NA                                                                  |
++--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------+
+| 4      | [MCMCglmm model](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/3_genetic_correlation_MCMCmodel_final.R)                                                                                                             | [Genetic Correlation](./4_genetic_correlation_plots.html)           |
++--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------+
+| 5      | [Climate PCA and Adaptive plasticity](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/10_PCA_and_Plasticity.Rmd)                                                                                                      | [Climate PCA and Adaptive plasticity](./10_PCA_and_Plasticity.html) |
++--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------+
+| 6      | [Bud Set 2020 estimation](https://github.com/anoobvinu07/NSF_RedSpruce_CG/blob/main/budset_2020.Rmd)                                                                                                                            | NA                                                                  |
++--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------+
 
 : Statistical analysis and major findings of the study
