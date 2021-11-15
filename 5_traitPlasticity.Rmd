@@ -1,0 +1,374 @@
+---
+title: "Trait Plasticity based on climate transfer distance"
+author: "Anoob Prakash"
+date: "03/03/2021"
+output:
+  rmarkdown::html_document:
+    theme: cosmo  
+    number_sections: false
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Methods  
+
+**family BLUP model**  
+- Mixed effect model run to get the family level blups for use in the MCMC run.  
+- Garden is set as the fixed effect.  
+- Family and mBed (5 beds x 3 sites) set as random effect.  
+- Height growth for a season is used as the fitness proxy to compare the adaptive nature of trait plasticity.  
+  - This helps in explaining whether the change in plasticity for a trait (positive/negative) is adaptive (top right of the plot) or maladaptive (bottom left of the plot).  
+  
+```
+# Creating mBed
+fitness <- fitness %>% unite(mBed, Garden, Bed, sep = "_", remove = FALSE)
+
+# lmer model for family blup 
+fitness_mod <- lmer(Growth ~ Garden + (1|mBed) + (1|Family), fitness)
+
+# extract the blups for the family from the model  
+fitness_blup <- ranef(fitness_mod)
+fitness_blup <- fitness_blup$Family
+fitness_blup <- cbind(Family=rownames(fitness_blup),fitness_blup)
+rownames(fitness_blup) <- NULL
+names(fitness_blup)[2] <- "fitness"
+```
+
+**Trait plasticity (as described in the paper)**   
+To estimate phenotypic plasticity for each trait, we ran LMMs (Model IV, Table S1) that included the fixed effect of garden climate (gPC1, based on each garden’s eigenvector score along PC1 of the climate PCA for the year of measurement), and random effects of Bed (1|Bed) and Family with random intercepts and slopes (gPC1|Family). We used the ‘coef()’ function to extract the random slopes for each Family with gPC1, which provides a measure of plasticity to garden climate (Arnold et al. 2019). To test if the magnitude of plasticity reflected differences due to source climate variability, we modeled the absolute value of plasticity as a function of source climate (sPC1), with a random effect of Population (Model V, Table S1).  
+   
+
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# setwd("Z:/Anoob/MCMCglmm")
+
+suppressPackageStartupMessages({
+# packages
+require(MCMCglmm)
+require(lmerTest)
+require(dplyr)
+require(tidyr)
+require(data.table)
+require(ggplot2)
+require(cowplot)
+require(plyr)
+})
+
+# data 
+budset_2019 <- read.csv("./trait_data/BudSet_2019.csv")
+budset_2020 <- read.csv("./trait_data/BudSet_2020.csv")
+budbreak_2020 <- read.csv("./trait_data/BudBreak_2020_cGDD.csv")
+heightGrowth_2019 <- read.csv("./trait_data/Growth_2019.csv")
+heightGrowth_2020 <- read.csv("./trait_data/Growth_2020.csv")
+# Plasticity <- read.csv("./trait_data/Plasticity.csv")
+Meta <- read.table("./Exome/RS_Exome_metadata.txt", sep="\t",header=T)
+
+PC_scores <- read.csv("./trait_data/PCA/PCA_score.csv", header=T)
+PC_scores <- PC_scores[!is.na(PC_scores$Family),]
+
+# meta data and PC 
+
+colnames(Meta)[colnames(Meta)=="Pop"] <- "Population"
+Meta$Region <- as.factor(Meta$Region)
+Meta$Region <- mapvalues(Meta$Region, from = c("C", "M", "E"), to = c("Core", "Margin", "Edge"));Meta$Region <- factor(Meta$Region,levels = c("Core", "Margin", "Edge"))
+
+
+Meta <- merge(x=Meta,
+                     y=PC_scores[,-c(1,2,3,5,17)],
+                     by.x="Family",
+                     by.y="Family")
+
+Meta <- Meta[,c("Population","Family","Region","Latitude","Longitude","Elevation","PC1","PC2","PC3","PC4","PC5","PC6",
+                "PC7","PC8","PC9","PC10","PC11")]
+```
+
+# Garden climate  
+
+**Garden climate**  
+```{r}
+Garden_clim <- read.table("./ClimateNA/climNA_gardens_2019-20.txt", header=T)
+Garden_clim
+selVars1 <- c('DD_0','DD18','MAR','PAS','MSP','RH','EXT','CMD','TD','eFFP','PET')
+colnames(Garden_clim)[1] <- "Garden"
+colnames(Garden_clim)[2] <- "Year"
+```
+
+```{r}
+# create ID for garden means
+# garden_identity <- Garden_climateNA1[,1]
+
+# create ID for garden
+garden_identity <- Garden_clim[,1:2]
+
+# selected clim of gardens
+data_p1 <- Garden_clim[,selVars1]
+```
+
+```{r}
+garden_id <- garden_identity
+
+colnames(garden_id)[1] <- "Garden"
+colnames(garden_id)[2] <- "Year"
+
+data_pca <- prcomp(Garden_clim[,-c(1:5)],scale. = T)
+
+# Extract PC axes for plotting
+PCAvalues <- data.frame(Garden = Garden_clim$Garden, Year = Garden_clim$Year,
+                        data_pca$x)
+PCAvalues$Year <- as.factor(PCAvalues$Year)
+
+# Extract loadings of the variables
+PCAloadings <- data.frame(Variables = rownames(data_pca$rotation), data_pca$rotation)
+
+# write.csv(PCAvalues, row.names = F, "./trait_data/PCA/PCA_garden_score.csv")
+# write.csv(PCAloadings, row.names = F, "./trait_data/PCA/PCA_garden_loadings.csv")
+
+PCAvalues_mod <- PCAvalues
+PCAvalues_mod$Garden[PCAvalues_mod$Garden=="VT"] <- "Vermont"
+PCAvalues_mod$Garden[PCAvalues_mod$Garden=="MD"] <- "Maryland"
+PCAvalues_mod$Garden[PCAvalues_mod$Garden=="NC"] <- "North_Carolina"
+
+```
+
+
+
+
+# Trait plasticity   {.tabset .tabset-fade .tabset-pills}  
+
+## Bud break 2020  
+
+- cGDD  
+
+```{r}
+budbreak_2020 <- merge(x=budbreak_2020,y=PCAvalues_mod[PCAvalues_mod$Year=="2020",], all.x=TRUE)
+budbreak_2020$mBed <- paste0(budbreak_2020$Garden,"_",budbreak_2020$Bed)
+
+#plasticity model
+budbreak_PC1_mod <- lmer(data = budbreak_2020, na.action = na.omit,
+                          cGDD ~ PC1  + (1|mBed) + (PC1|Family))
+
+summary(budbreak_PC1_mod)
+
+budbreak_PC1 <- ranef(budbreak_PC1_mod)
+budbreak_PC1 <- budbreak_PC1$Family
+budbreak_PC1 <- cbind(Family=rownames(budbreak_PC1),budbreak_PC1)
+rownames(budbreak_PC1) <- NULL
+
+budbreak_PC1$Family <- as.factor(budbreak_PC1$Family)
+colnames(budbreak_PC1)[colnames(budbreak_PC1)=="PC1"] <- "BudBreak_2020"
+budbreak_PC1 <- budbreak_PC1[,-2]
+head(budbreak_PC1) 
+
+# converting the negative values to absolute values to make plasticity values comparable across the traits
+
+bb2020x_PC1 <- coef(budbreak_PC1_mod)
+# hist(testx_PC1$PC1)
+bb2020x_PC1 <- bb2020x_PC1$Family
+bb2020x_PC1 <- cbind(Family=rownames(bb2020x_PC1),bb2020x_PC1)
+rownames(bb2020x_PC1) <- NULL
+bb2020x_PC1$abs <- abs(bb2020x_PC1$PC1)
+hist(bb2020x_PC1$PC1)
+hist(bb2020x_PC1$abs)
+bb2020x_PC1 <- bb2020x_PC1[,-2]
+colnames(bb2020x_PC1)[3] <- "BudBreak_cGDD"
+bb2020x_PC1 <- bb2020x_PC1[,-2]  
+```
+
+- DOY  
+
+```{r}
+budbreak_2020_DOY <- merge(x=budbreak_2020,y=PCAvalues_mod[PCAvalues_mod$Year=="2020",], all.x=TRUE)
+budbreak_2020_DOY$mBed <- paste0(budbreak_2020_DOY$Garden,"_",budbreak_2020_DOY$Bed)
+
+#plasticity model
+budbreak_DOY_PC1_mod <- lmer(data = budbreak_2020_DOY, na.action = na.omit,
+                          BudBreak ~ PC1  + (1|mBed) + (PC1|Family))
+
+summary(budbreak_DOY_PC1_mod)
+
+budbreak_DOY_PC1 <- ranef(budbreak_DOY_PC1_mod)
+budbreak_DOY_PC1 <- budbreak_DOY_PC1$Family
+budbreak_DOY_PC1 <- cbind(Family=rownames(budbreak_DOY_PC1),budbreak_DOY_PC1)
+rownames(budbreak_DOY_PC1) <- NULL
+
+budbreak_DOY_PC1$Family <- as.factor(budbreak_DOY_PC1$Family)
+colnames(budbreak_DOY_PC1)[colnames(budbreak_DOY_PC1)=="PC1"] <- "BudBreak_2020_DOY"
+budbreak_DOY_PC1 <- budbreak_DOY_PC1[,-2]
+head(budbreak_DOY_PC1) 
+
+# converting the negative values to absolute values to make plasticity values comparable across the traits
+
+bb2020_DOYx_PC1 <- coef(budbreak_DOY_PC1_mod)
+# hist(testx_PC1$PC1)
+bb2020_DOYx_PC1 <- bb2020_DOYx_PC1$Family
+bb2020_DOYx_PC1 <- cbind(Family=rownames(bb2020_DOYx_PC1),bb2020_DOYx_PC1)
+rownames(bb2020_DOYx_PC1) <- NULL
+bb2020_DOYx_PC1$abs <- abs(bb2020_DOYx_PC1$PC1)
+hist(bb2020_DOYx_PC1$PC1)
+hist(bb2020_DOYx_PC1$abs)
+bb2020_DOYx_PC1 <- bb2020_DOYx_PC1[,-2]
+colnames(bb2020_DOYx_PC1)[3] <- "BudBreak_DOY"
+bb2020_DOYx_PC1 <- bb2020_DOYx_PC1[,-2]  
+```
+
+## Bud set 2019 
+
+```{r}
+budset_2019 <- merge(x=budset_2019,y=PCAvalues_mod[PCAvalues_mod$Year=="2019",], all.x=TRUE)
+budset_2019$mBed <- paste0(budset_2019$Garden,"_",budset_2019$Bed)
+
+# plasticity model
+budset_2019_PC1_mod <- lmer(data = budset_2019, na.action = na.omit,
+                          BudSet ~ PC1  + (1|mBed) + (PC1|Family))
+
+summary(budset_2019_PC1_mod)
+
+budset_2019_PC1 <- ranef(budset_2019_PC1_mod)
+budset_2019_PC1 <- budset_2019_PC1$Family
+budset_2019_PC1 <- cbind(Family=rownames(budset_2019_PC1),budset_2019_PC1)
+rownames(budset_2019_PC1) <- NULL
+
+budset_2019_PC1$Family <- as.factor(budset_2019_PC1$Family)
+colnames(budset_2019_PC1)[colnames(budset_2019_PC1)=="PC1"] <- "BudSet_2019"
+budset_2019_PC1 <- budset_2019_PC1[,-2]
+
+bs2019x_PC1 <- coef(budset_2019_PC1_mod)
+# hist(testx_PC1$PC1)
+bs2019x_PC1 <- bs2019x_PC1$Family
+bs2019x_PC1 <- cbind(Family=rownames(bs2019x_PC1),bs2019x_PC1)
+rownames(bs2019x_PC1) <- NULL
+bs2019x_PC1$abs <- abs(bs2019x_PC1$PC1)
+hist(bs2019x_PC1$PC1)
+hist(bs2019x_PC1$abs)
+bs2019x_PC1 <- bs2019x_PC1[,-c(2:3)]
+colnames(bs2019x_PC1)[2] <- "BudSet_2019"  
+```
+
+## Bud set 2020  
+
+```{r}
+budset_2020 <- merge(x=budset_2020,y=PCAvalues_mod[PCAvalues_mod$Year=="2020",], all.x=TRUE)
+budset_2020$mBed <- paste0(budset_2020$Garden,"_",budset_2020$Bed)
+
+
+
+# plasticity model
+budset_2020_PC1_mod <- lmer(data = budset_2020, na.action = na.omit,
+                          BudSet ~ PC1  + (1|mBed) + (PC1|Family))
+
+summary(budset_2020_PC1_mod)
+
+budset_2020_PC1 <- ranef(budset_2020_PC1_mod)
+budset_2020_PC1 <- budset_2020_PC1$Family
+budset_2020_PC1 <- cbind(Family=rownames(budset_2020_PC1),budset_2020_PC1)
+rownames(budset_2020_PC1) <- NULL
+
+budset_2020_PC1$Family <- as.factor(budset_2020_PC1$Family)
+colnames(budset_2020_PC1)[colnames(budset_2020_PC1)=="PC1"] <- "BudSet_2020"
+budset_2020_PC1 <- budset_2020_PC1[,-2]
+
+bs2020x_PC1 <- coef(budset_2020_PC1_mod)
+# hist(testx_PC1$PC1)
+bs2020x_PC1 <- bs2020x_PC1$Family
+bs2020x_PC1 <- cbind(Family=rownames(bs2020x_PC1),bs2020x_PC1)
+rownames(bs2020x_PC1) <- NULL
+bs2020x_PC1$abs <- abs(bs2020x_PC1$PC1)
+hist(bs2020x_PC1$PC1)
+hist(bs2020x_PC1$abs)
+
+bs2020x_PC1 <- bs2020x_PC1[,-c(2:3)]
+colnames(bs2020x_PC1)[2] <- "BudSet_2020"
+```
+
+## Growth 2019 
+
+
+```{r}
+growth_2019 <- merge(x=heightGrowth_2019,y=PCAvalues_mod[PCAvalues_mod$Year=="2019",], all.x=TRUE)
+growth_2019$mBed <- paste0(growth_2019$Garden,"_",growth_2019$Bed)
+
+
+
+# plasticity model
+growth_2019_PC1_mod <- lmer(data = growth_2019, na.action = na.omit,
+                          Growth ~ PC1  + (1|mBed) + (PC1|Family))
+
+summary(growth_2019_PC1_mod)
+
+# ranef
+growth_2019_PC1 <- ranef(growth_2019_PC1_mod)
+growth_2019_PC1 <- growth_2019_PC1$Family
+growth_2019_PC1 <- cbind(Family=rownames(growth_2019_PC1),growth_2019_PC1)
+rownames(growth_2019_PC1) <- NULL
+
+growth_2019_PC1$Family <- as.factor(growth_2019_PC1$Family)
+colnames(growth_2019_PC1)[colnames(growth_2019_PC1)=="PC1"] <- "Growth_2019"
+growth_2019_PC1 <- growth_2019_PC1[,-2]
+
+# coef
+gw2019x_PC1 <- coef(growth_2019_PC1_mod)
+gw2019x_PC1 <- gw2019x_PC1$Family
+gw2019x_PC1 <- cbind(Family=rownames(gw2019x_PC1),gw2019x_PC1)
+rownames(gw2019x_PC1) <- NULL
+gw2019x_PC1$abs <- abs(gw2019x_PC1$PC1)
+hist(gw2019x_PC1$PC1)
+hist(gw2019x_PC1$abs)
+
+gw2019x_PC1 <- gw2019x_PC1[,-c(2:3)]
+colnames(gw2019x_PC1)[2] <- "Growth_2019"  
+```
+
+## Growth 2020  
+
+```{r}
+growth_2020 <- merge(x=heightGrowth_2020,y=PCAvalues_mod[PCAvalues_mod$Year=="2020",], all.x=TRUE)
+growth_2020$mBed <- paste0(growth_2020$Garden,"_",growth_2020$Bed)
+
+
+
+# plasticity model
+growth_2020_PC1_mod <- lmer(data = growth_2020, na.action = na.omit,
+                          Growth ~ PC1  + (1|mBed) + (PC1|Family))
+
+summary(growth_2020_PC1_mod)
+
+growth_2020_PC1 <- ranef(growth_2020_PC1_mod)
+growth_2020_PC1 <- growth_2020_PC1$Family
+growth_2020_PC1 <- cbind(Family=rownames(growth_2020_PC1),growth_2020_PC1)
+rownames(growth_2020_PC1) <- NULL
+
+growth_2020_PC1$Family <- as.factor(growth_2020_PC1$Family)
+colnames(growth_2020_PC1)[colnames(growth_2020_PC1)=="PC1"] <- "Growth_2020"
+growth_2020_PC1 <- growth_2020_PC1[,-2]
+
+gw2020x_PC1 <- coef(growth_2020_PC1_mod)
+# hist(testx_PC1$PC1)
+gw2020x_PC1 <- gw2020x_PC1$Family
+gw2020x_PC1 <- cbind(Family=rownames(gw2020x_PC1),gw2020x_PC1)
+rownames(gw2020x_PC1) <- NULL
+gw2020x_PC1$abs <- abs(gw2020x_PC1$PC1)
+hist(gw2020x_PC1$PC1)
+hist(gw2020x_PC1$abs)
+
+gw2020x_PC1 <- gw2020x_PC1[,-c(2:3)]
+colnames(gw2020x_PC1)[2] <- "Growth_2020"
+```
+
+# Plasticity  
+```{r}
+
+Plasticity <- Reduce(function(x, y) merge(x, y, all=TRUE),
+                     list(Meta,bb2020x_PC1,bb2020_DOYx_PC1,bs2019x_PC1,bs2020x_PC1,gw2019x_PC1,gw2020x_PC1))
+Plasticity <- Plasticity[!is.na(Plasticity$BudBreak_cGDD),]
+
+# write.csv(Plasticity, "./trait_data/Plasticity.csv")
+```
+
+
+
+
